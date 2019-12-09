@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<litepal>
+    <dbname value="options" />
+    <version value="1" />
+    <list>
+        <mapping class="cn.nlifew.clipmgr.bean.ActionRecord" />
+        <mapping class="cn.nlifew.clipmgr.bean.UserRule" />
+        <mapping class="cn.nlifew.clipmgr.bean.PackageRule" />
+    </list>
+</litepal>

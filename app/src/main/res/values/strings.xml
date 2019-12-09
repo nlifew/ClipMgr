@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">放开我的剪贴板</string>
+    <string name="xposed_module_description">记录并拦截所有试图修改剪贴板的操作</string>
+</resources>
