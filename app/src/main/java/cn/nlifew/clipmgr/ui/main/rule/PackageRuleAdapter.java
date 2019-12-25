@@ -73,8 +73,8 @@ final class PackageRuleAdapter extends Adapter<PackageRuleWrapper>
 
     @Override
     public void onClick(View v) {
-        final ViewHolder holder = (ViewHolder) v.getTag();
-        final PackageRuleWrapper wrapper = (PackageRuleWrapper) holder.getTag();
+        final ViewHolder holder = (ViewHolder) v.getTag(R.id.tag_holder);
+        final PackageRuleWrapper wrapper = (PackageRuleWrapper) v.getTag(R.id.tag_item);
 
         int selectedItem;
         switch (wrapper.mOrigin.getRule()) {
@@ -126,12 +126,12 @@ final class PackageRuleAdapter extends Adapter<PackageRuleWrapper>
     }
 
     private void onBindViewHolder(@NonNull ViewHolder holder, PackageRuleWrapper rule) {
-        holder.setTag(rule);
-        holder.itemView.setTag(holder);
+        holder.itemView.setTag(R.id.tag_holder, holder);
+        holder.itemView.setTag(R.id.tag_item, rule);
 
         holder.setTextViewText(R.id.fragment_main_rule_item_label, rule.appName)
                 .setImageViewDrawable(R.id.fragment_main_rule_item_icon, rule.icon)
                 .setTextViewText(R.id.fragment_main_rule_item_pkg, rule.pkg)
-                .setTextViewText(R.id.fragment_main_rule_item_action, rule.rule);
+                .setTextViewText(R.id.fragment_main_rule_item_action, rule.getRule());
     }
 }

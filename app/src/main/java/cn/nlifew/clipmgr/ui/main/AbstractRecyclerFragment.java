@@ -94,7 +94,8 @@ public abstract class AbstractRecyclerFragment extends BaseFragment {
                 }
             }
         };
-        LocalBroadcastManager.getInstance(c)
+        LocalBroadcastManager
+                .getInstance(c)
                 .registerReceiver(mSearchEventReceiver, filter);
     }
     @Override

@@ -1,6 +1,7 @@
+
 #############################################
 #
-# 基本指令区域（没什么别的需求不需要动）
+# 对于一些基本指令的添加
 #
 #############################################
 # 代码混淆压缩比，在0~7之间，默认为5，一般不做修改
@@ -35,10 +36,9 @@
 # 这个过滤器是谷歌推荐的算法，一般不做更改
 -optimizations !code/simplification/cast,!field/*,!class/merging/*
 
-
 #############################################
 #
-# Android开发中一些需要保留的公共部分（没什么别的需求不需要动）
+# Android开发中一些需要保留的公共部分 start
 #
 #############################################
 
@@ -54,14 +54,12 @@
 -keep public class * extends android.view.View
 -keep public class com.android.vending.licensing.ILicensingService
 
-
 # 保留support下的所有类及其内部类
 -keep class android.support.** {*;}
 
 # 保留继承的
 -keep public class * extends android.support.v4.**
 -keep public class * extends android.support.v7.**
--keep public class * extends android.support.design.**
 -keep public class * extends android.support.annotation.**
 
 # 保留R下面的资源
@@ -74,10 +72,9 @@
 
 # 保留在Activity中的方法参数是view的方法，
 # 这样以来我们在layout中写的onClick就不会被影响
--keepclassmembers class * extends android.app.Activity {
+-keepclassmembers class * extends android.app.Activity{
     public void *(android.view.View);
 }
-
 
 # 保留枚举类不被混淆
 -keepclassmembers enum * {
@@ -119,47 +116,74 @@
 }
 
 # webView处理，项目中没有使用到webView忽略即可
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#    public *;
+-keepclassmembers class fqcn.of.javascript.interface.for.webview {
+    public *;
+}
+-keepclassmembers class * extends android.webkit.webViewClient {
+    public void *(android.webkit.WebView, java.lang.String, android.graphics.Bitmap);
+    public boolean *(android.webkit.WebView, java.lang.String);
+}
+-keepclassmembers class * extends android.webkit.webViewClient {
+    public void *(android.webkit.webView, jav.lang.String);
+}
+-keepclassmembers class com.lieyunwang.finance.activity.InfoNewDetailActivity.InJavaScriptLocalObj{
+    public *;
+}
+-keepattributes *JavascriptInterface*
+
+-keepclassmembers class * {
+   public <init> (org.json.JSONObject);
+}
+
+-keep public class com.xxx.xxx.R$*{
+public static final int *;
+}
+
+# 自定义类的混淆
+# keep annotated by NotProguard  ---- like this: keep class com.example.test.xxxBean {*;}
+#                                ---- like this: keep class com.example.test.** {*;}
+# 下面这块主要针对实体类处理，后面如果有地方需要添加一些不被混淆的变量，函数都可以通过添加@NotProguard来注解
+# com.xxx.xxx修改为实际的包名
+#-keep @com.xxx.xxx.anotation.NotProguard class * {*;}
+#-keep class * {
+#@com.xxx.xxx.anotation.NotProguard <fields>;
 #}
-#-keepclassmembers class * extends android.webkit.webViewClient {
-#    public void *(android.webkit.WebView, java.lang.String, android.graphics.Bitmap);
-#    public boolean *(android.webkit.WebView, java.lang.String);
-#}
-#-keepclassmembers class * extends android.webkit.webViewClient {
-#    public void *(android.webkit.webView, jav.lang.String);
+#-keepclassmembers class * {
+#@com.xxx.xxx.anotation.NotProguard <methods>;
 #}
 
-# 移除Log类打印各个等级日志的代码，打正式包的时候可以做为禁log使用，这里可以作为禁止log打印的功能使用
-# 记得proguard-android.txt中一定不要加-dontoptimize才起作用
-# 另外的一种实现方案是通过BuildConfig.DEBUG的变量来控制
+# Tablayout反射修改下划线宽度导致的tabtrip空指针问题 - 需要可打开
+#-keep class android.support.design.widget.TabLayout{*;}
+
+#（可选）避免Log打印输出
 #-assumenosideeffects class android.util.Log {
-#    public static int v(...);
-#    public static int i(...);
-#    public static int w(...);
-#    public static int d(...);
-#    public static int e(...);
-#}
+#   public static *** v(...);
+#   public static *** d(...);
+#   public static *** i(...);
+#   public static *** w(...);
+# }
 
 #############################################
 #
-# 项目中特殊处理部分
+# 以上是Android基本混淆规则 end
 #
 #############################################
 
-#-----------处理反射类---------------
+#############################################
+#
+# 第三方混淆 start
+#
+#############################################
 
 
-
-#-----------处理js交互---------------
-
-
-
-#-----------处理实体类---------------
-# 在开发的时候我们可以将所有的实体类放在一个包内，这样我们写一次混淆就行了。
-
-
-#-----------处理第三方依赖库---------
 -keep class org.litepal.** { *; }
 -keep class * extends org.litepal.crud.LitePalSupport { *; }
--keep class * extends de.robv.android.xposed.**
+-keep class * extends org.litepal.LitePalApplication {*;}
+-keep class * extends de.robv.android.xposed.** {*;}
+
+#############################################
+#
+# 第三方混淆 end
+#
+#############################################
+

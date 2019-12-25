@@ -19,10 +19,12 @@ public final class Settings {
     }
 
     private Settings(Context c) {
-        mPref = c.getApplicationContext()
-                .getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        mContext = c.getApplicationContext();
+        mPref = mContext.getSharedPreferences(
+                PREF_NAME, Context.MODE_PRIVATE);
     }
 
+    private final Context mContext;
     private final SharedPreferences mPref;
 
     public static final String PREF_NAME = "settings";

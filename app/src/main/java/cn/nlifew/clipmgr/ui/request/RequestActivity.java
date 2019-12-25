@@ -1,6 +1,7 @@
 package cn.nlifew.clipmgr.ui.request;
 
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -24,8 +25,11 @@ import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import java.lang.ref.SoftReference;
+import java.util.HashMap;
 import java.util.Map;
 
+import cn.nlifew.clipmgr.core.IClipMgr;
 import cn.nlifew.clipmgr.ui.BaseActivity;
 import cn.nlifew.clipmgr.util.DisplayUtils;
 
@@ -33,45 +37,59 @@ public class RequestActivity extends BaseActivity implements
         DialogInterface.OnClickListener,
         DialogInterface.OnCancelListener {
     private static final String TAG = "RequestActivity";
-    private static final String EXTRA_BUILDER = "EXTRA_BUILDER";
 
-    public static final class Builder implements Parcelable {
+    public static final class Builder {
+        private static final String PREFIX =
+                "cn.nlifew.clipmgr.ui.Request.RequestActivity.EXTRA_BUILDER_";
+
+        private static final String EXTRA_BUILDER_ID = PREFIX + "ID";
+        private static final String EXTRA_BUILDER_ICON = PREFIX + "ICON";
+        private static final String EXTRA_BUILDER_TITLE = PREFIX + "TITLE";
+        private static final String EXTRA_BUILDER_MESSAGE = PREFIX + "MESSAGE";
+        private static final String EXTRA_BUILDER_POSITIVE = PREFIX + "POSITIVE";
+        private static final String EXTRA_BUILDER_NEGATIVE = PREFIX + "NEGATIVE";
+        private static final String EXTRA_BUILDER_REMEMBER = PREFIX + "REMEMBER";
+        private static final String EXTRA_BUILDER_CANCELABLE = PREFIX + "CANCELABLE";
+
         private final String mId;
-        private String mTitle;
-        private String mMessage;
-        private String mPositive;
-        private String mNegative;
-        private String mRemember;
+        private CharSequence mTitle;
+        private CharSequence mMessage;
+        private CharSequence mPositive;
+        private CharSequence mNegative;
+        private CharSequence mRemember;
         private String mIcon;
         private boolean mCancelable;
-        private IRequestFinish mCallback;
+        private OnRequestFinishListener mCallback;
+
+        private static Map<String, SoftReference<OnRequestFinishListener>> CALLBACKS
+                = new HashMap<>();
 
         public Builder(String id) {
             this.mId = id;
         }
 
         public Builder setTitle(CharSequence title) {
-            mTitle = title == null ? null : title.toString();
+            mTitle = title;
             return this;
         }
 
         public Builder setMessage(CharSequence msg) {
-            mMessage = msg == null ? null : msg.toString();
+            mMessage = msg;
             return this;
         }
 
         public Builder setPositive(CharSequence text) {
-            mPositive = text == null ? null : text.toString();
+            mPositive = text;
             return this;
         }
 
         public Builder setNegative(CharSequence text) {
-            mNegative = text == null ? null : text.toString();
+            mNegative = text;
             return this;
         }
 
         public Builder setRemember(CharSequence text) {
-            mRemember = text == null ? null : text.toString();
+            mRemember = text;
             return this;
         }
 
@@ -85,71 +103,69 @@ public class RequestActivity extends BaseActivity implements
             return this;
         }
 
-        public Builder setCallback(OnRequestFinishListener l) {
-            mCallback = l;
+        public Builder setCallback(OnRequestFinishListener callback) {
+            mCallback = callback;
+            CALLBACKS.put(mId, new SoftReference<>(callback));
             return this;
         }
 
         public Intent build(Context c) {
-            Intent intent = new Intent(c, RequestActivity.class);
-            intent.putExtra(EXTRA_BUILDER, this);
-            return intent;
+            /* 到这里肯定有人会问：
+             * 为什么不实现 Parcelable 呢，你这样一点都不优雅
+             * too young too simple
+             * title，message 这些是 CharSequence 类型而不是 String
+             * Parcel 并没有 writeCharSequence()，只有 writeString()
+             */
+            return new Intent(c, RequestActivity.class)
+                    .putExtra(EXTRA_BUILDER_ID, mId)
+                    .putExtra(EXTRA_BUILDER_ICON, mIcon)
+                    .putExtra(EXTRA_BUILDER_TITLE, mTitle)
+                    .putExtra(EXTRA_BUILDER_MESSAGE, mMessage)
+                    .putExtra(EXTRA_BUILDER_POSITIVE, mPositive)
+                    .putExtra(EXTRA_BUILDER_NEGATIVE, mNegative)
+                    .putExtra(EXTRA_BUILDER_REMEMBER, mRemember)
+                    .putExtra(EXTRA_BUILDER_CANCELABLE, mCancelable);
         }
 
-        @Override
-        public int describeContents() {
-            return 0;
+        private Builder(Intent intent) {
+            mId = intent.getStringExtra(EXTRA_BUILDER_ID);
+            mIcon = intent.getStringExtra(EXTRA_BUILDER_ICON);
+            mTitle = intent.getCharSequenceExtra(EXTRA_BUILDER_TITLE);
+            mMessage = intent.getCharSequenceExtra(EXTRA_BUILDER_MESSAGE);
+            mPositive = intent.getCharSequenceExtra(EXTRA_BUILDER_POSITIVE);
+            mNegative = intent.getCharSequenceExtra(EXTRA_BUILDER_NEGATIVE);
+            mRemember = intent.getCharSequenceExtra(EXTRA_BUILDER_REMEMBER);
+            mCancelable = intent.getBooleanExtra(EXTRA_BUILDER_CANCELABLE, false);
+
+            SoftReference<OnRequestFinishListener> callback;
+            mCallback = (callback = CALLBACKS.remove(mId)) == null ?
+                    null : callback.get();
         }
+    }
 
-        @Override
-        public void writeToParcel(Parcel dest, int flags) {
-            dest.writeString(this.mId);
-            dest.writeString(this.mTitle);
-            dest.writeString(this.mMessage);
-            dest.writeString(this.mPositive);
-            dest.writeString(this.mNegative);
-            dest.writeString(this.mRemember);
-            dest.writeString(this.mIcon);
-            dest.writeByte(this.mCancelable ? (byte) 1 : (byte) 0);
-            dest.writeStrongBinder(this.mCallback == null ? null : this.mCallback.asBinder());
-        }
 
-        private Builder(Parcel in) {
-            this.mId = in.readString();
-            this.mTitle = in.readString();
-            this.mMessage = in.readString();
-            this.mPositive = in.readString();
-            this.mNegative = in.readString();
-            this.mRemember = in.readString();
-            this.mIcon = in.readString();
-            this.mCancelable = in.readByte() != 0;
-            this.mCallback = OnRequestFinishListener.asInterface(in.readStrongBinder());
-        }
+    public interface OnRequestFinishListener {
+        int RESULT_UNKNOWN  = 0;
+        int RESULT_CANCEL   = 1;
+        int RESULT_POSITIVE = 1 << 1;
+        int RESULT_NEGATIVE = 1 << 2;
+        int RESULT_REMEMBER = 1 << 3;
 
-        public static final Creator<Builder> CREATOR = new Creator<Builder>() {
-            @Override
-            public Builder createFromParcel(Parcel source) {
-                return new Builder(source);
-            }
-
-            @Override
-            public Builder[] newArray(int size) {
-                return new Builder[size];
-            }
-        };
+        void onRequestFinish(String id, int result);
     }
 
     private Builder mRequest;
     private CheckBox mRemember;
+    private boolean mShouldCallback = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         final Intent intent = getIntent();
-        mRequest = intent.getParcelableExtra(EXTRA_BUILDER);
-        if (mRequest == null) {
-            Log.w(TAG, "onCreate: call Request.request() to start this Activity");
+
+        if (intent == null || (mRequest = new Builder(intent)).mId == null) {
+            Log.w(TAG, "onCreate: use Builder to build a valid Intent");
             finish();
         }
         AlertDialog.Builder builder = buildAlertDialog();
@@ -203,14 +219,22 @@ public class RequestActivity extends BaseActivity implements
     }
 
     @Override
+    protected void onDestroy() {
+        if (mShouldCallback) {
+            onRequestFinish(OnRequestFinishListener.RESULT_UNKNOWN);
+        }
+        super.onDestroy();
+    }
+
+    @Override
     public void onClick(DialogInterface dialog, int which) {
         dialog.dismiss();
         switch (which) {
             case DialogInterface.BUTTON_POSITIVE:
-                onRequestFinish(IRequestFinish.RESULT_POSITIVE);
+                onRequestFinish(OnRequestFinishListener.RESULT_POSITIVE);
                 break;
             case DialogInterface.BUTTON_NEGATIVE:
-                onRequestFinish(IRequestFinish.RESULT_NEGATIVE);
+                onRequestFinish(OnRequestFinishListener.RESULT_NEGATIVE);
                 break;
         }
         finish();
@@ -218,10 +242,27 @@ public class RequestActivity extends BaseActivity implements
 
     @Override
     public void onCancel(DialogInterface dialog) {
-        onRequestFinish(IRequestFinish.RESULT_CANCEL);
+        onRequestFinish(OnRequestFinishListener.RESULT_CANCEL);
         finish();
     }
 
+
+    public void onRequestFinish(int result) {
+        mShouldCallback = false;
+        OnRequestFinishListener callback = mRequest.mCallback;
+        if (callback == null) {
+            // 这一点都没有情趣，不回调你请求个毛啊
+            return;
+        }
+
+        if (mRemember != null && mRemember.isChecked()) {
+            result |= OnRequestFinishListener.RESULT_REMEMBER;
+        }
+
+        callback.onRequestFinish(mRequest.mId, result);
+    }
+
+    /*
     private void onRequestFinish(int result) {
         IRequestFinish callback = mRequest.mCallback;
         if (callback == null) {
@@ -236,8 +277,8 @@ public class RequestActivity extends BaseActivity implements
         callback.onRequestFinish(mRequest.mId, result);
     }
 
-
     private interface IRequestFinish extends IInterface {
+        int RESULT_UNKNOWN  = 0;
         int RESULT_CANCEL   = 1;
         int RESULT_POSITIVE = 1 << 1;
         int RESULT_NEGATIVE = 1 << 2;
@@ -319,5 +360,5 @@ public class RequestActivity extends BaseActivity implements
             return super.onTransact(code, data, reply, flags);
         }
     }
-
+*/
 }

@@ -12,6 +12,8 @@ import android.view.ViewGroup;
 import android.widget.Filter;
 import android.widget.Filterable;
 
+import org.litepal.LitePal;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -90,6 +92,11 @@ class ActionRecordAdapter extends AbstractRecyclerFragment.Adapter<ActionRecordW
 
     void stopLoading() {
         mFragment.mSwipeLayout.setRefreshing(false);
+    }
+
+    void onClearActionRecord() {
+        LitePal.deleteAll(ActionRecord.class);
+        onRefresh();
     }
 
     @NonNull

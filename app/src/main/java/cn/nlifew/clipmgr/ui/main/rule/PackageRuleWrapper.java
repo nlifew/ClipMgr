@@ -15,6 +15,14 @@ class PackageRuleWrapper {
 
     String appName;
     Drawable icon;
-    String rule;
     String pkg;
+
+    String getRule() {
+        switch (mOrigin.getRule()) {
+            case PackageRule.RULE_REQUEST: return "询问";
+            case PackageRule.RULE_GRANT: return "允许";
+            case PackageRule.RULE_DENY: return "拒绝";
+        }
+        return "?_?";
+    }
 }

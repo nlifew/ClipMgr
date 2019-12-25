@@ -2,12 +2,10 @@ package cn.nlifew.clipmgr.ui.main;
 
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.support.design.widget.TabLayout;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.ViewPager;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.Toolbar;
@@ -28,6 +26,7 @@ public class MainActivity extends BaseActivity implements
 
     public static final String ACTION_SEARCH_APP_FINISH     =   "ACTION_SEARCH_APP_FINISH";
     public static final String ACTION_SEARCH_APP_CANCEL     =   "ACTION_SEARCH_APP_CANCEL";
+    public static final String ACTION_CLEAR_ACTION_RECORD   =   "ACTION_CLEAR_ACTION_RECORD";
 
     public static final String EXTRA_SEARCH_APP_TEXT    =   "EXTRA_SEARCH_APP_TEXT";
 
@@ -54,9 +53,13 @@ public class MainActivity extends BaseActivity implements
     }
 
     private void showAboutDialog() {
-        String msg = "这个 Xposed 模块通过 hook ClipboardManager.setPrimary() 函数，" +
-                "来拦截所有试图修改剪贴板的操作" +
-                "app 使用了一些 android 隐藏的 API，如果您的厂商更改了这些接口，可能会无法使用";
+        String msg = "如果您正在使用 Android Q，本应用是没必要的，" +
+                "Android Q 限制了非输入法非焦点应用对剪贴板的访问——" +
+                "模块也不会对 Android Q 进行适配\n" +
+                "这个 Xposed 模块通过 hook ClipboardManager.setPrimary() 函数，" +
+                "来拦截所有试图修改剪贴板的操作\n" +
+                "app 使用了一些 Android 隐藏的 API，如果您的厂商更改了这些接口，可能会无法使用\n" +
+                "作者：coolapk @ablist97";
 
         new AlertDialog.Builder(this)
                 .setTitle(R.string.app_name)
@@ -64,7 +67,6 @@ public class MainActivity extends BaseActivity implements
                 .setPositiveButton("确定", null)
                 .show();
     }
-
 
 
     @Override
@@ -87,7 +89,6 @@ public class MainActivity extends BaseActivity implements
     }
 
 
-
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -100,6 +101,13 @@ public class MainActivity extends BaseActivity implements
             }
             case R.id.activity_main_about: {
                 showAboutDialog();
+                return true;
+            }
+            case R.id.activity_main_clear_record: {
+                Intent intent = new Intent(ACTION_CLEAR_ACTION_RECORD);
+                LocalBroadcastManager
+                        .getInstance(this)
+                        .sendBroadcast(intent);
                 return true;
             }
         }
@@ -116,7 +124,8 @@ public class MainActivity extends BaseActivity implements
         Intent intent = new Intent(ACTION_SEARCH_APP_FINISH);
         intent.putExtra(EXTRA_SEARCH_APP_TEXT, query);
 
-        LocalBroadcastManager.getInstance(this)
+        LocalBroadcastManager
+                .getInstance(this)
                 .sendBroadcast(intent);
 
         return false;

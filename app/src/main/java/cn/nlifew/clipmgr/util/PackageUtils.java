@@ -3,6 +3,7 @@ package cn.nlifew.clipmgr.util;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 public final class PackageUtils {
@@ -20,6 +21,9 @@ public final class PackageUtils {
         return "";
     }
 
+    public static String getAppName(Context c, String pkg) {
+        return getAppName(c.getPackageManager(), pkg);
+    }
 
     public static boolean isPackageInstalled(Context c, String pkg) {
         final PackageManager pm = c.getPackageManager();

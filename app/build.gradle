@@ -7,26 +7,20 @@ android {
         applicationId "cn.nlifew.clipmgr"
         minSdkVersion 23
         targetSdkVersion 27
-        versionCode 1
-        versionName "1.0"
+        versionCode 5
+        versionName "1.2"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 
-    signingConfigs {
-        release {
-            
-        }
-    }
 
     buildTypes {
         release {
             minifyEnabled false
             multiDexEnabled false
-            signingConfig signingConfigs.release
+//            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-
 }
 
 dependencies {

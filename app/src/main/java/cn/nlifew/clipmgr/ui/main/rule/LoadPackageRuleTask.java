@@ -66,7 +66,6 @@ class LoadPackageRuleTask extends AsyncTask<Void, Void, List<PackageRuleWrapper>
 
             wrapper.appName = app.applicationInfo.loadLabel(mPm).toString();
             wrapper.icon = app.applicationInfo.loadIcon(mPm);
-            wrapper.rule = rule2str(rule.getRule());
             wrapper.pkg = rule.getPkg();
         }
         return wrappers;
@@ -81,14 +80,5 @@ class LoadPackageRuleTask extends AsyncTask<Void, Void, List<PackageRuleWrapper>
         }
         adapter.updateDataSet(userRuleWrappers);
         adapter.stopLoading();
-    }
-
-    private static String rule2str(int rule) {
-        switch (rule) {
-            case PackageRule.RULE_GRANT: return "允许";
-            case PackageRule.RULE_DENY: return "拒绝";
-            case PackageRule.RULE_REQUEST: return "询问";
-        }
-        return "未知";
     }
 }

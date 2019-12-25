@@ -15,7 +15,6 @@ public class ViewHolder extends RecyclerView.ViewHolder {
         super(v);
     }
 
-    private Object mTag;
     private SparseArray<View> mViews;
 
     @SuppressWarnings("unchecked")
@@ -32,14 +31,6 @@ public class ViewHolder extends RecyclerView.ViewHolder {
             mViews.put(id, v);
         }
         return (T) v;
-    }
-
-    public Object getTag() {
-        return mTag;
-    }
-
-    public void setTag(Object tag) {
-        mTag = tag;
     }
 
     public ViewHolder setTextViewText(@IdRes int id, CharSequence text) {

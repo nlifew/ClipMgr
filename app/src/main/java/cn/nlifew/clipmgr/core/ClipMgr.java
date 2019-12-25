@@ -8,8 +8,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.RemoteException;
 import android.util.Log;
+import android.widget.Toast;
 
 import org.litepal.LitePal;
+
+import java.util.LinkedList;
+import java.util.List;
 
 import cn.nlifew.clipmgr.R;
 import cn.nlifew.clipmgr.bean.ActionRecord;
@@ -36,8 +40,10 @@ public class ClipMgr extends IClipMgr.Stub {
     private final Context mContext;
     private final Handler mH;
 
+    private final LinkedList<Intent> mRequestCaches = new LinkedList<>();
+
     @Override
-    public void setPrimaryClip(final String pkg, final ClipData clip) throws RemoteException {
+    public void setPrimaryClip(final String pkg, final ClipData clip) {
         Log.d(TAG, "setPrimaryClip: " + pkg + " " + clip);
 
         // 查询规则
@@ -46,7 +52,7 @@ public class ClipMgr extends IClipMgr.Stub {
                 .findFirst(PackageRule.class);
         int rule = pkgRule == null ? PackageRule.RULE_REQUEST : pkgRule.getRule();
 
-        final String appName = PackageUtils.getAppName(mContext.getPackageManager(), pkg);
+        final String appName = PackageUtils.getAppName(mContext, pkg);
 
         switch (rule) {
             case PackageRule.RULE_GRANT: {
@@ -125,48 +131,86 @@ public class ClipMgr extends IClipMgr.Stub {
     private void onRequestClipPerm(final String pkg, final String name, final ClipData clip) {
         String text = clip2text(clip);
 
-        StringBuilder msg = new StringBuilder(64);
-        msg.append('\n').append(name).append("尝试修改剪贴板为: ");
+        final StringBuilder msg = new StringBuilder(64);
+        msg.append('\n').append("尝试修改剪贴板为: ");
         if (text.length() <= 20) {
             msg.append(text);
         } else {
             msg.append(text, 0, 20).append("...");
         }
 
-        RequestActivity.Builder builder = new RequestActivity.Builder(pkg);
-        Intent intent = builder
-                .setTitle(mContext.getString(R.string.app_name))
+        /* Builder 的 id 必须为唯一值
+         * 这里我们并没有使用包名 pkg 作为 Builder 的 id，
+         * 防止遇到连续多次操作剪贴板的情况时，
+         * 后面的回调替换掉前面的
+         */
+        Intent intent = new RequestActivity.Builder(String.valueOf(System.currentTimeMillis()))
+                .setTitle(name)
                 .setMessage(msg)
                 .setPositive("确定")
                 .setNegative("取消")
                 .setCancelable(false)
                 .setRemember("记住我的选择")
-                .setCallback(new RequestActivity.OnRequestFinishListener() {
-                    @Override
-                    public void onRequestFinish(String id, int result) {
-                        int rule;
-                        if ((result & RESULT_POSITIVE) != 0) {
-                            rule = PackageRule.RULE_GRANT;
-                            onGrantClipPerm(pkg, name, clip);
-                        }
-                        else if ((result & RESULT_NEGATIVE) != 0) {
-                            rule = PackageRule.RULE_DENY;
-                            onDenyClipPerm(pkg, name, clip);
-                        }
-                        else {
-                            Log.w(TAG, "onRequestFinish: unknown result: " + result + " " + id);
-                            return;
-                        }
-                        if ((result & RESULT_REMEMBER) != 0) {
-                            // 记住我的选择
-                            PackageRule pkgRule = new PackageRule(pkg, rule);
-                            pkgRule.save();
-                        }
-                    }
-                })
+                .setCallback(new ActivityRequestCallback(pkg, name, clip))
                 .build(mContext);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        mContext.startActivity(intent);
+
+
+        // 添加进回调队列中
+        mRequestCaches.addLast(intent);
+        if (mRequestCaches.size() == 1) {
+            mContext.startActivity(intent);
+        }
+    }
+
+    private class ActivityRequestCallback implements
+            RequestActivity.OnRequestFinishListener {
+
+        ActivityRequestCallback(String pkg, String name, ClipData clip) {
+            mPkg = pkg;
+            mName = name;
+            mClip = clip;
+        }
+
+        private final String mPkg;
+        private final String mName;
+        private final ClipData mClip;
+
+        @Override
+        public void onRequestFinish(String id, int result) {
+            int rule;
+            if ((result & RESULT_NEGATIVE) != 0) {
+                rule = PackageRule.RULE_DENY;
+                onDenyClipPerm(mPkg, mName, mClip);
+            }
+            else {
+                // 放宽一下要求，只要不拒绝，就认为同意
+                rule = PackageRule.RULE_GRANT;
+                onGrantClipPerm(mPkg, mName, mClip);
+            }
+
+            if ((result & RESULT_REMEMBER) != 0) {
+                // 记住我的选择
+                new PackageRule(mPkg, rule).save();
+            }
+
+            // 通知下一个 Intent 可以进行请求了
+            mRequestCaches.removeFirst();
+
+            /* 关于为什么要向主线程 post 一下而不是直接调用
+             * 原因在于：当这个方法被回调时，RequestActivity 还未 finish，
+             * 而我们的 Intent 又添加了 FLAG_ACTIVITY_NEW_TASK，
+             * 如果此时 startActivity()，这个 Activity 是不会出来的
+             */
+            mH.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (mRequestCaches.size() != 0) {
+                        mContext.startActivity(mRequestCaches.get(0));
+                    }
+                }
+            });
+        }
     }
 
     private static String clip2text(ClipData clip) {
