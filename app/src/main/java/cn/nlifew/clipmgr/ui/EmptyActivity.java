@@ -10,14 +10,13 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import cn.nlifew.clipmgr.R;
 import cn.nlifew.clipmgr.ui.main.MainActivity;
 
 public class EmptyActivity extends BaseActivity {
     private static final String TAG = "EmptyActivity";
-
-    private boolean mService = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,16 +38,19 @@ public class EmptyActivity extends BaseActivity {
                         onClickButton2((Button) v);
                     }
                 });
+
     }
 
     private void onClickButton1(Button btn) {
-        Log.d(TAG, "onClickButton1: start");
-
+        Log.d(TAG, "onClickButton1: " + EmptyActivity.class.getClassLoader());
+        try {
+            Class.forName("cn.nlifew.clipmgr.RiruCall");
+        } catch (ClassNotFoundException e) {
+            Log.e(TAG, "onClickButton1: ", e);
+        }
     }
 
     private void onClickButton2(Button btn) {
         Log.d(TAG, "onClickButton2: start");
-
-
     }
 }

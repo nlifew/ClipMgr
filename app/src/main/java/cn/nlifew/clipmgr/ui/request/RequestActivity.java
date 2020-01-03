@@ -112,8 +112,7 @@ public class RequestActivity extends BaseActivity implements
         public Intent build(Context c) {
             /* 到这里肯定有人会问：
              * 为什么不实现 Parcelable 呢，你这样一点都不优雅
-             * too young too simple
-             * title，message 这些是 CharSequence 类型而不是 String
+             * 原因是：title，message 这些是 CharSequence 类型而不是 String
              * Parcel 并没有 writeCharSequence()，只有 writeString()
              */
             return new Intent(c, RequestActivity.class)
@@ -151,7 +150,7 @@ public class RequestActivity extends BaseActivity implements
         int RESULT_NEGATIVE = 1 << 2;
         int RESULT_REMEMBER = 1 << 3;
 
-        void onRequestFinish(String id, int result);
+        void onRequestFinish(RequestActivity activity, String id, int result);
     }
 
     private Builder mRequest;
@@ -251,7 +250,6 @@ public class RequestActivity extends BaseActivity implements
         mShouldCallback = false;
         OnRequestFinishListener callback = mRequest.mCallback;
         if (callback == null) {
-            // 这一点都没有情趣，不回调你请求个毛啊
             return;
         }
 
@@ -259,106 +257,6 @@ public class RequestActivity extends BaseActivity implements
             result |= OnRequestFinishListener.RESULT_REMEMBER;
         }
 
-        callback.onRequestFinish(mRequest.mId, result);
+        callback.onRequestFinish(this, mRequest.mId, result);
     }
-
-    /*
-    private void onRequestFinish(int result) {
-        IRequestFinish callback = mRequest.mCallback;
-        if (callback == null) {
-            // 这一点都没有情趣，不回调你请求个毛啊
-            return;
-        }
-
-        if (mRemember != null && mRemember.isChecked()) {
-            result |= IRequestFinish.RESULT_REMEMBER;
-        }
-
-        callback.onRequestFinish(mRequest.mId, result);
-    }
-
-    private interface IRequestFinish extends IInterface {
-        int RESULT_UNKNOWN  = 0;
-        int RESULT_CANCEL   = 1;
-        int RESULT_POSITIVE = 1 << 1;
-        int RESULT_NEGATIVE = 1 << 2;
-        int RESULT_REMEMBER = 1 << 3;
-        void onRequestFinish(String id, int result);
-    }
-
-    private static final class IRequestFinishProxy implements IRequestFinish {
-
-        private final IBinder mBinder;
-
-        IRequestFinishProxy(IBinder binder) {
-            mBinder = binder;
-        }
-
-        @Override
-        public IBinder asBinder() {
-            return mBinder;
-        }
-
-        @Override
-        public void onRequestFinish(String id, int result) {
-            final Parcel data = Parcel.obtain();
-            final Parcel reply = Parcel.obtain();
-            try {
-                data.writeInterfaceToken(OnRequestFinishListener.DESCRIPTOR);
-                data.writeString(id);
-                data.writeInt(result);
-                mBinder.transact(OnRequestFinishListener.TRANSACTION_onRequestFinish,
-                        data, reply, 0);
-                reply.readException();
-            } catch (RemoteException e) {
-                Log.e(TAG, "onRequestFinish: ", e);
-            } finally {
-                data.recycle();
-                reply.recycle();
-            }
-        }
-    }
-
-    public static abstract class OnRequestFinishListener extends Binder implements IRequestFinish {
-
-        private static final String DESCRIPTOR = OnRequestFinishListener.class.getName();
-
-        private static final int TRANSACTION_onRequestFinish = FIRST_CALL_TRANSACTION;
-
-
-        public OnRequestFinishListener() {
-            attachInterface(this, DESCRIPTOR);
-        }
-
-        static IRequestFinish asInterface(IBinder binder) {
-            if (binder == null) {
-                return null;
-            }
-            final IInterface local = binder.queryLocalInterface(DESCRIPTOR);
-            if (local instanceof IRequestFinish) {
-                return (IRequestFinish) local;
-            }
-            return new IRequestFinishProxy(binder);
-        }
-
-        @Override
-        public final IBinder asBinder() {
-            return this;
-        }
-
-        @Override
-        public final boolean onTransact(int code, @NonNull Parcel data, @Nullable Parcel reply, int flags) throws RemoteException {
-            switch (code) {
-                case INTERFACE_TRANSACTION:
-                    reply.writeString(DESCRIPTOR);
-                    return true;
-                case TRANSACTION_onRequestFinish:
-                    this.onRequestFinish(data.readString(), data.readInt());
-                    reply.writeNoException();
-                    return true;
-            }
-            return super.onTransact(code, data, reply, flags);
-        }
-    }
-*/
 }

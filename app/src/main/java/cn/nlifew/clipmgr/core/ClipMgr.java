@@ -153,12 +153,11 @@ public class ClipMgr extends IClipMgr.Stub {
                 .setRemember("记住我的选择")
                 .setCallback(new ActivityRequestCallback(pkg, name, clip))
                 .build(mContext);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
 
         // 添加进回调队列中
         mRequestCaches.addLast(intent);
         if (mRequestCaches.size() == 1) {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             mContext.startActivity(intent);
         }
     }
@@ -177,7 +176,7 @@ public class ClipMgr extends IClipMgr.Stub {
         private final ClipData mClip;
 
         @Override
-        public void onRequestFinish(String id, int result) {
+        public void onRequestFinish(RequestActivity activity, String id, int result) {
             int rule;
             if ((result & RESULT_NEGATIVE) != 0) {
                 rule = PackageRule.RULE_DENY;
@@ -196,20 +195,9 @@ public class ClipMgr extends IClipMgr.Stub {
 
             // 通知下一个 Intent 可以进行请求了
             mRequestCaches.removeFirst();
-
-            /* 关于为什么要向主线程 post 一下而不是直接调用
-             * 原因在于：当这个方法被回调时，RequestActivity 还未 finish，
-             * 而我们的 Intent 又添加了 FLAG_ACTIVITY_NEW_TASK，
-             * 如果此时 startActivity()，这个 Activity 是不会出来的
-             */
-            mH.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (mRequestCaches.size() != 0) {
-                        mContext.startActivity(mRequestCaches.get(0));
-                    }
-                }
-            });
+            if (mRequestCaches.size() != 0) {
+                activity.startActivity(mRequestCaches.get(0));
+            }
         }
     }
 

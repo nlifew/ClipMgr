@@ -23,7 +23,7 @@ class LoadActionRecordTask extends AsyncTask<Void, Void, List<ActionRecordWrappe
 
     private static final Date sDate = new Date();
     private static final SimpleDateFormat sDateFormat = new SimpleDateFormat(
-            "yyyy-MM-dd HH:mm:ss", Locale.CHINA
+            "yy-MM-dd HH:mm:ss", Locale.CHINA
     );
 
     LoadActionRecordTask(ActionRecordAdapter adapter) {
