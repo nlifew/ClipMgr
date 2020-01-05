@@ -3,6 +3,14 @@ package cn.nlifew.clipmgr.core;
 
 import android.content.ClipData;
 
+
 interface IClipMgr {
-    void setPrimaryClip(String pkg, in ClipData clip);
+
+    void saveActionRecord(String pkg, in ClipData clip, int action);
+
+    int getPackageRule(String pkg);
+
+    void setPackageRule(String pkg, int rule);
+
+    boolean isRadicalMode();
 }

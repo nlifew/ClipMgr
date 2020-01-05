@@ -2,6 +2,10 @@ package cn.nlifew.clipmgr.settings;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+
+import cn.nlifew.clipmgr.BuildConfig;
 
 public final class Settings {
 
@@ -29,7 +33,8 @@ public final class Settings {
 
     public static final String PREF_NAME = "settings";
     public static final String KEY_SHOW_SYSTEM_APP  =   "show_system_app";
-    public static final String KEY_FIRST_OPEN       =   "is_first_open";
+    public static final String KEY_RADICAL_MODE     =   "radical_mode";
+    public static final String KEY_VERSION_CODE     =   "version_code";
 
     public boolean isShowSystemApp() {
         return mPref.getBoolean(KEY_SHOW_SYSTEM_APP, true);
@@ -40,10 +45,19 @@ public final class Settings {
     }
 
     public boolean isFirstOpen() {
-        return mPref.getBoolean(KEY_FIRST_OPEN, true);
+        // 这个 key 在 versionCode 为 5 的时候添加
+        boolean first = BuildConfig.VERSION_CODE > mPref.getInt(KEY_VERSION_CODE, 5);
+        if (first) {
+            mPref.edit().putInt(KEY_VERSION_CODE, BuildConfig.VERSION_CODE).apply();
+        }
+        return first;
     }
 
-    public void setFirstOpen(boolean first) {
-        mPref.edit().putBoolean(KEY_FIRST_OPEN, first).apply();
+    public boolean isRadicalMode() {
+        return mPref.getBoolean(KEY_RADICAL_MODE, false);
+    }
+
+    public void setRadicalMode(boolean enable) {
+        mPref.edit().putBoolean(KEY_RADICAL_MODE, enable).apply();
     }
 }

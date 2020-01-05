@@ -14,6 +14,10 @@
     <item android:id="@+id/activity_main_clear_record"
         android:title="清除历史记录" />
 
+    <item android:id="@+id/activity_main_radical_mode"
+        android:title="激进模式"
+        android:checkable="true"/>
+
     <item android:id="@+id/activity_main_about"
         android:title="关于" />
 

@@ -6,6 +6,9 @@ import android.os.Parcelable;
 import org.litepal.LitePal;
 import org.litepal.crud.LitePalSupport;
 
+/**
+ * @Deprecated use PackageRule instead
+ */
 @Deprecated
 public class UserRule extends LitePalSupport implements Parcelable {
     public static final int RULE_GRANT = 1;

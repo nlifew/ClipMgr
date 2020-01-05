@@ -40,10 +40,11 @@
 
         <activity android:name=".ui.EmptyActivity">
         </activity>
-        <activity
-            android:excludeFromRecents="true"
-            android:name=".ui.request.RequestActivity"
-            android:theme="@style/Transparent" />
+
+        <activity android:name=".ui.request.RequestActivity"
+            android:exported="true"
+            android:theme="@style/Transparent"
+            android:excludeFromRecents="true" />
     </application>
 
 </manifest>

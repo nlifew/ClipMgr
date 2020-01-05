@@ -1,22 +1,17 @@
 package cn.nlifew.clipmgr.ui.request;
 
+import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.BroadcastReceiver;
-import android.content.Context;
+import android.content.ComponentName;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
-import android.os.Binder;
-import android.os.IBinder;
-import android.os.IInterface;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.os.Bundle;
-import android.os.Process;
-import android.os.RemoteException;
-import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.Gravity;
@@ -25,238 +20,266 @@ import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import java.lang.ref.SoftReference;
-import java.util.HashMap;
-import java.util.Map;
-
-import cn.nlifew.clipmgr.core.IClipMgr;
+import cn.nlifew.clipmgr.BuildConfig;
 import cn.nlifew.clipmgr.ui.BaseActivity;
 import cn.nlifew.clipmgr.util.DisplayUtils;
 
-public class RequestActivity extends BaseActivity implements
-        DialogInterface.OnClickListener,
-        DialogInterface.OnCancelListener {
+public class RequestActivity extends BaseActivity  {
     private static final String TAG = "RequestActivity";
 
-    public static final class Builder {
-        private static final String PREFIX =
-                "cn.nlifew.clipmgr.ui.Request.RequestActivity.EXTRA_BUILDER_";
+    public static final class Builder implements Parcelable {
+        private static final String TAG = "Builder";
+        private static final String EXTRA_BUILDER = TAG + ".EXTRA_BUILDER";
 
-        private static final String EXTRA_BUILDER_ID = PREFIX + "ID";
-        private static final String EXTRA_BUILDER_ICON = PREFIX + "ICON";
-        private static final String EXTRA_BUILDER_TITLE = PREFIX + "TITLE";
-        private static final String EXTRA_BUILDER_MESSAGE = PREFIX + "MESSAGE";
-        private static final String EXTRA_BUILDER_POSITIVE = PREFIX + "POSITIVE";
-        private static final String EXTRA_BUILDER_NEGATIVE = PREFIX + "NEGATIVE";
-        private static final String EXTRA_BUILDER_REMEMBER = PREFIX + "REMEMBER";
-        private static final String EXTRA_BUILDER_CANCELABLE = PREFIX + "CANCELABLE";
+        String mIcon;
+        String mTitle;
+        String mMessage;
+        String mPositive;
+        String mNegative;
+        String mRemember;
+        boolean mCancelable;
+        IRequestFinish mCallback;
 
-        private final String mId;
-        private CharSequence mTitle;
-        private CharSequence mMessage;
-        private CharSequence mPositive;
-        private CharSequence mNegative;
-        private CharSequence mRemember;
-        private String mIcon;
-        private boolean mCancelable;
-        private OnRequestFinishListener mCallback;
-
-        private static Map<String, SoftReference<OnRequestFinishListener>> CALLBACKS
-                = new HashMap<>();
-
-        public Builder(String id) {
-            this.mId = id;
+        public Builder() {
         }
 
-        public Builder setTitle(CharSequence title) {
-            mTitle = title;
+        public Builder setIcon(String path) {
+            this.mIcon = path;
             return this;
         }
 
-        public Builder setMessage(CharSequence msg) {
-            mMessage = msg;
+        public Builder setTitle(String title) {
+            this.mTitle = title;
             return this;
         }
 
-        public Builder setPositive(CharSequence text) {
-            mPositive = text;
+        public Builder setMessage(String msg) {
+            this.mMessage = msg;
             return this;
         }
 
-        public Builder setNegative(CharSequence text) {
-            mNegative = text;
+        public Builder setPositive(String text) {
+            this.mPositive = text;
             return this;
         }
 
-        public Builder setRemember(CharSequence text) {
-            mRemember = text;
+        public Builder setNegative(String text) {
+            this.mNegative = text;
             return this;
         }
 
-        public Builder setIcon(String file) {
-            mIcon = file;
+        public Builder setCancelable(boolean b) {
+            this.mCancelable = b;
             return this;
         }
 
-        public Builder setCancelable(boolean cancelable) {
-            mCancelable = cancelable;
+        public Builder setRemember(String text) {
+            this.mRemember = text;
             return this;
         }
 
         public Builder setCallback(OnRequestFinishListener callback) {
-            mCallback = callback;
-            CALLBACKS.put(mId, new SoftReference<>(callback));
+            this.mCallback = callback;
             return this;
         }
 
-        public Intent build(Context c) {
-            /* 到这里肯定有人会问：
-             * 为什么不实现 Parcelable 呢，你这样一点都不优雅
-             * 原因是：title，message 这些是 CharSequence 类型而不是 String
-             * Parcel 并没有 writeCharSequence()，只有 writeString()
-             */
-            return new Intent(c, RequestActivity.class)
-                    .putExtra(EXTRA_BUILDER_ID, mId)
-                    .putExtra(EXTRA_BUILDER_ICON, mIcon)
-                    .putExtra(EXTRA_BUILDER_TITLE, mTitle)
-                    .putExtra(EXTRA_BUILDER_MESSAGE, mMessage)
-                    .putExtra(EXTRA_BUILDER_POSITIVE, mPositive)
-                    .putExtra(EXTRA_BUILDER_NEGATIVE, mNegative)
-                    .putExtra(EXTRA_BUILDER_REMEMBER, mRemember)
-                    .putExtra(EXTRA_BUILDER_CANCELABLE, mCancelable);
+        public Intent build() {
+            Intent intent = new Intent();
+            intent.setComponent(new ComponentName(
+                    BuildConfig.APPLICATION_ID,
+                    RequestActivity.class.getName()
+            ));
+            intent.putExtra(EXTRA_BUILDER, this);
+            return intent;
         }
 
-        private Builder(Intent intent) {
-            mId = intent.getStringExtra(EXTRA_BUILDER_ID);
-            mIcon = intent.getStringExtra(EXTRA_BUILDER_ICON);
-            mTitle = intent.getCharSequenceExtra(EXTRA_BUILDER_TITLE);
-            mMessage = intent.getCharSequenceExtra(EXTRA_BUILDER_MESSAGE);
-            mPositive = intent.getCharSequenceExtra(EXTRA_BUILDER_POSITIVE);
-            mNegative = intent.getCharSequenceExtra(EXTRA_BUILDER_NEGATIVE);
-            mRemember = intent.getCharSequenceExtra(EXTRA_BUILDER_REMEMBER);
-            mCancelable = intent.getBooleanExtra(EXTRA_BUILDER_CANCELABLE, false);
+        public AlertDialog.Builder buildDialog(Activity activity) {
+            return new DialogHelper(activity, this).buildAlertDialog();
+        }
 
-            SoftReference<OnRequestFinishListener> callback;
-            mCallback = (callback = CALLBACKS.remove(mId)) == null ?
-                    null : callback.get();
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeString(this.mIcon);
+            dest.writeString(this.mTitle);
+            dest.writeString(this.mMessage);
+            dest.writeString(this.mPositive);
+            dest.writeString(this.mNegative);
+            dest.writeString(this.mRemember);
+            dest.writeByte(this.mCancelable ? (byte) 1 : (byte) 0);
+            dest.writeStrongBinder(this.mCallback == null ? null :
+                    this.mCallback.asBinder());
+        }
+
+        private Builder(Parcel in) {
+            this.mIcon = in.readString();
+            this.mTitle = in.readString();
+            this.mMessage = in.readString();
+            this.mPositive = in.readString();
+            this.mNegative = in.readString();
+            this.mRemember = in.readString();
+            this.mCancelable = in.readByte() != 0;
+            this.mCallback = IRequestFinish.Stub.asInterface(in.readStrongBinder());
+        }
+
+        public static final Creator<Builder> CREATOR = new Creator<Builder>() {
+            @Override
+            public Builder createFromParcel(Parcel source) {
+                return new Builder(source);
+            }
+
+            @Override
+            public Builder[] newArray(int size) {
+                return new Builder[size];
+            }
+        };
+    }
+
+    private static final class DialogHelper extends Handler implements
+            DialogInterface.OnCancelListener,
+            DialogInterface.OnClickListener {
+
+        Builder mBuilder;
+        CheckBox mCheckBox;
+        Activity mActivity;
+        boolean mShouldCallback = true;
+
+        DialogHelper(Activity activity, Builder builder) {
+            super(Looper.getMainLooper());
+            this.mActivity = activity;
+            this.mBuilder = builder;
+        }
+
+        private AlertDialog.Builder buildAlertDialog() {
+            AlertDialog.Builder builder = new AlertDialog.Builder(mActivity,
+                    android.R.style.Theme_Material_Light_Dialog_NoActionBar_MinWidth);
+            builder.setMessage(mBuilder.mMessage)
+                    .setCancelable(mBuilder.mCancelable)
+                    .setOnCancelListener(this);
+            if (mBuilder.mIcon != null) {
+                builder.setIcon(BitmapDrawable.createFromPath(mBuilder.mIcon));
+            }
+            if (mBuilder.mTitle != null) {
+                builder.setTitle(mBuilder.mTitle);
+            }
+            if (mBuilder.mPositive != null) {
+                builder.setPositiveButton(mBuilder.mPositive, this);
+            }
+            if (mBuilder.mNegative != null) {
+                builder.setNegativeButton(mBuilder.mNegative, this);
+            }
+            if (mBuilder.mRemember != null) {
+                LinearLayout layout = new LinearLayout(mActivity);
+                layout.setLayoutParams(new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                ));
+                int dp20 = DisplayUtils.dp2px(mActivity, 20);
+                layout.setPadding(dp20, 0, dp20, 0);
+
+                mCheckBox = new CheckBox(mActivity);
+                ViewGroup.MarginLayoutParams lp = new ViewGroup.MarginLayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                );
+                lp.rightMargin = dp20 / 2;
+                layout.addView(mCheckBox, lp);
+
+                TextView tv = new TextView(mActivity);
+                tv.setText(mBuilder.mRemember);
+                tv.setGravity(Gravity.CENTER_VERTICAL);
+                layout.addView(tv,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.MATCH_PARENT);
+                builder.setView(layout);
+            }
+            return builder;
+        }
+
+        @Override
+        public void onCancel(DialogInterface dialog) {
+            dialog.dismiss();
+            onRequestFinish(OnRequestFinishListener.RESULT_CANCEL);
+            if (mActivity instanceof RequestActivity) {
+                mActivity.finish();
+            }
+        }
+
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            dialog.dismiss();
+            switch (which) {
+                case DialogInterface.BUTTON_POSITIVE:
+                    onRequestFinish(OnRequestFinishListener.RESULT_POSITIVE);
+                    break;
+                case DialogInterface.BUTTON_NEGATIVE:
+                    onRequestFinish(OnRequestFinishListener.RESULT_NEGATIVE);
+                    break;
+            }
+            if (mActivity instanceof RequestActivity) {
+                mActivity.finish();
+            }
+        }
+
+        private void onRequestFinish(int result) {
+            if (! mShouldCallback) {
+                return;
+            }
+            mShouldCallback = false;
+
+            if (mCheckBox != null && mCheckBox.isChecked()) {
+                result |= OnRequestFinishListener.RESULT_REMEMBER;
+            }
+
+            if (mBuilder.mCallback != null) {
+                Message msg = Message.obtain();
+                msg.what = WHAT_CALLBACK;
+                msg.obj = mBuilder.mCallback;
+                msg.arg1 = result;
+                sendMessage(msg);
+            }
+        }
+
+        private static final int WHAT_CALLBACK = 10;
+
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == WHAT_CALLBACK) {
+                IRequestFinish callback = (IRequestFinish) msg.obj;
+                try {
+                    callback.onRequestFinish(msg.arg1);
+                } catch (Exception e) {
+                    Log.e(TAG, "handleMessage: ", e);
+                }
+            }
         }
     }
 
-
-    public interface OnRequestFinishListener {
-        int RESULT_UNKNOWN  = 0;
-        int RESULT_CANCEL   = 1;
-        int RESULT_POSITIVE = 1 << 1;
-        int RESULT_NEGATIVE = 1 << 2;
-        int RESULT_REMEMBER = 1 << 3;
-
-        void onRequestFinish(RequestActivity activity, String id, int result);
-    }
-
-    private Builder mRequest;
-    private CheckBox mRemember;
-    private boolean mShouldCallback = true;
+    private DialogHelper mHelper;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        final Intent intent = getIntent();
-
-        if (intent == null || (mRequest = new Builder(intent)).mId == null) {
-            Log.w(TAG, "onCreate: use Builder to build a valid Intent");
+        Builder builder = getIntent().getParcelableExtra(Builder.EXTRA_BUILDER);
+        if (builder == null) {
+            Log.e(TAG, "onCreate: no Builder found. use Builder.build to build a Intent");
             finish();
+            return;
         }
-        AlertDialog.Builder builder = buildAlertDialog();
-        builder.show();
-    }
-
-    private AlertDialog.Builder buildAlertDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(mRequest.mMessage)
-                .setCancelable(mRequest.mCancelable)
-                .setOnCancelListener(this);
-
-        if (mRequest.mIcon != null) {
-            builder.setIcon(BitmapDrawable.createFromPath(mRequest.mIcon));
-        }
-        if (mRequest.mTitle != null) {
-            builder.setTitle(mRequest.mTitle);
-        }
-        if (mRequest.mPositive != null) {
-            builder.setPositiveButton(mRequest.mPositive, this);
-        }
-        if (mRequest.mNegative != null) {
-            builder.setNegativeButton(mRequest.mNegative, this);
-        }
-        if (mRequest.mRemember != null) {
-            LinearLayout layout = new LinearLayout(this);
-            layout.setLayoutParams(new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            ));
-            int dp20 = DisplayUtils.dp2px(this, 20);
-            layout.setPadding(dp20, 0, dp20, 0);
-
-            mRemember = new CheckBox(this);
-            ViewGroup.MarginLayoutParams lp = new ViewGroup.MarginLayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-            );
-            lp.rightMargin = dp20 / 2;
-            layout.addView(mRemember, lp);
-
-            TextView tv = new TextView(this);
-            tv.setText(mRequest.mRemember);
-            tv.setGravity(Gravity.CENTER_VERTICAL);
-            layout.addView(tv,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.MATCH_PARENT);
-            builder.setView(layout);
-        }
-        return builder;
+        mHelper = new DialogHelper(this, builder);
+        mHelper.buildAlertDialog().show();
     }
 
     @Override
     protected void onDestroy() {
-        if (mShouldCallback) {
-            onRequestFinish(OnRequestFinishListener.RESULT_UNKNOWN);
-        }
         super.onDestroy();
-    }
-
-    @Override
-    public void onClick(DialogInterface dialog, int which) {
-        dialog.dismiss();
-        switch (which) {
-            case DialogInterface.BUTTON_POSITIVE:
-                onRequestFinish(OnRequestFinishListener.RESULT_POSITIVE);
-                break;
-            case DialogInterface.BUTTON_NEGATIVE:
-                onRequestFinish(OnRequestFinishListener.RESULT_NEGATIVE);
-                break;
+        if (mHelper.mShouldCallback) {
+            mHelper.onRequestFinish(OnRequestFinishListener.RESULT_UNKNOWN);
         }
-        finish();
-    }
-
-    @Override
-    public void onCancel(DialogInterface dialog) {
-        onRequestFinish(OnRequestFinishListener.RESULT_CANCEL);
-        finish();
-    }
-
-
-    public void onRequestFinish(int result) {
-        mShouldCallback = false;
-        OnRequestFinishListener callback = mRequest.mCallback;
-        if (callback == null) {
-            return;
-        }
-
-        if (mRemember != null && mRemember.isChecked()) {
-            result |= OnRequestFinishListener.RESULT_REMEMBER;
-        }
-
-        callback.onRequestFinish(this, mRequest.mId, result);
     }
 }

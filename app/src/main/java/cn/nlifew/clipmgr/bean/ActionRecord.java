@@ -1,5 +1,6 @@
 package cn.nlifew.clipmgr.bean;
 
+import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -15,12 +16,12 @@ public final class ActionRecord extends LitePalSupport implements Parcelable {
     private String text;
     private int action;
 
-    public ActionRecord(String name, String pkg, String text, int action, long time) {
+    public ActionRecord(String name, String pkg, String text, int action) {
         this.appName = name;
         this.pkg = pkg;
         this.text = text;
         this.action = action;
-        this.time = time;
+        this.time = System.currentTimeMillis();
     }
 
     public String getPkg() {

@@ -1,1 +1,1 @@
-include ':app', ':apicompat', ":riru-module-clipmgr"
+include ':app', ':apicompat'

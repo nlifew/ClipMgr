@@ -3,23 +3,24 @@ package cn.nlifew.clipmgr.core;
 
 import android.app.Activity;
 import android.app.ActivityThread;
-import android.app.Application;
 import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.os.Bundle;
 import android.os.IBinder;
+import android.os.RemoteException;
 import android.util.Log;
 
-import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
-import java.util.LinkedList;
 import java.util.Map;
 
 import cn.nlifew.clipmgr.BuildConfig;
+import cn.nlifew.clipmgr.bean.ActionRecord;
+import cn.nlifew.clipmgr.bean.PackageRule;
+import cn.nlifew.clipmgr.ui.request.OnRequestFinishListener;
+import cn.nlifew.clipmgr.ui.request.RequestActivity;
+import cn.nlifew.clipmgr.util.PackageUtils;
 import cn.nlifew.clipmgr.util.ReflectUtils;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
@@ -51,94 +52,183 @@ public class ClipHook implements IXposedHookLoadPackage {
         );
     }
 
-    private static final class HookSetPrimaryClipMethod extends XC_MethodHook {
+    private static final class HookSetPrimaryClipMethod extends XC_MethodHook implements
+            ServiceConnection {
+        private static boolean sIgnore;
+        private static Field sActivitiesField;
+        private static Field sStoppedField;
+        private static Field sActivityField;
 
-        private Context mContext;
-        private final LinkedList<ClipData> mCaches = new LinkedList<>();
 
-        /**
-         * 这个方法用于拿到当前应用的 Context
-         * 这里我们先使用反射拿到 ClipboardManager 的 Context，
-         * 如果失败再尝试 ThreadActivity.currentApplication()
-         * 原因是 flyme8 似乎修改了相关 API，使得后者返回我们自己的 Context
-         * @param cm ClipboardManager
-         * @return ApplicationContext
-         */
-        private Context getApplicationContext(ClipboardManager cm) {
-            if (mContext != null) {
-                return mContext;
+        @SuppressWarnings("unchecked")
+        private static Activity getTopActivity() {
+            if (sIgnore) {
+                return null;
             }
-            // 通过反射，拿到 ClipboardManager 内的 Context
-            Field cxt = ReflectUtils.getDeclaredField(ClipboardManager.class, "mContext");
-            if (cxt != null) {
-                try {
-                    mContext = ((Context) cxt.get(cm)).getApplicationContext();
-                    return mContext;
-                } catch (Exception e) {
-                    XposedBridge.log(e);
+            try {
+                if (sActivitiesField == null) {
+                    sActivitiesField = ReflectUtils.getDeclaredField(
+                            ActivityThread.class, "mActivities"
+                    );
+                    Class<?> cls = Class.forName("android.app.ActivityThread$ActivityClientRecord");
+                    sActivityField = ReflectUtils.getDeclaredField(cls, "activity");
+                    sStoppedField = ReflectUtils.getDeclaredField(cls, "stopped");
                 }
+                ActivityThread thread = ActivityThread.currentActivityThread();
+                final Map<Object, Object> mActivities = (Map<Object, Object>)
+                        sActivitiesField.get(thread);
+
+                for (Object r : mActivities.values()) {
+                    Activity activity = (Activity) sActivityField.get(r);
+                    if (activity.isFinishing() || activity.isDestroyed()
+                            || ((boolean) sStoppedField.get(r))) {
+                        continue;
+                    }
+                    return activity;
+                }
+            } catch (Exception e) {
+                sIgnore = true;
+                Log.e(TAG, "getTopActivity: ", e);
             }
-            // 如果反射失败，通过隐藏 API 拿到 Context
-            mContext = ActivityThread.currentApplication();
-            return mContext;
+            return null;
         }
 
         @Override
-        protected void beforeHookedMethod(final MethodHookParam param) throws Throwable {
+        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+            Log.i(TAG, "beforeHookedMethod: start");
 
-            /* 这里通过绑定服务的方式跳转到我们自己的进程
-             * 需要注意的一点是，我们并没有直接使用传入的 ClipData，
-             * 而是把 ClipData 先放在一个缓存池中，回调时再取出来。
-             * 原因在于：ServiceConnection 的回调次序和 bindService() 之间并不严格对应
-             * 举个例子，某个 app 先把剪贴板设置为 1，再马上设置为 2，
-             * 正常情况下，应该先处理 1 的请求，再处理 2。
-             * 但很多时候是 2 的 ServiceConnection 先回调，从而导致剪贴板数据异常
-             */
+            mContext = ActivityThread.currentApplication();
+            ClipData clip = (ClipData) param.args[0];
 
-            final Context c = getApplicationContext((ClipboardManager) param.thisObject);
-            final ClipData clip = (ClipData) param.args[0];
+            final String pkg = mContext.getPackageName();
+            Log.i(TAG, "beforeHookedMethod: " + pkg + " " + clip);
 
-            XposedBridge.log( c.getPackageName() + " " + clip);
-
-
-            /* bugfix: 虽然已经在 handleLoadPackage() 里排除了自己，
-             * 但在 Flyme8 上仍然会出现套娃，不知道为什么
-             * 看起来和它自带的剪贴板提示有关系
-             */
-            if (MY_PACKAGE_NAME.equals(c.getPackageName())) {
-                XposedBridge.log("wtf: I hook myself ?");
+            if (MY_PACKAGE_NAME.equals(pkg)) {
+                Log.w(TAG, "beforeHookedMethod: ignore hook myself");
                 return;
             }
 
+            if (mWorkingClipData != null) {
+                // 上次的活还没干完，这次又来新的活了，资本家呵呵
+                // 直接覆盖掉上次的数据，毕竟剪贴板留新不留旧
+                mWorkingClipData = clip;
+                param.setResult(null);
+                return;
+            }
+            // 接下来准备绑定服务和远程连接
             Intent intent = new Intent();
-            intent.setComponent(new ComponentName(MY_PACKAGE_NAME,
-                    MY_PACKAGE_NAME + MY_SERVICE_NAME));
+            intent.setComponent(new ComponentName(
+                    MY_PACKAGE_NAME, MY_PACKAGE_NAME + MY_SERVICE_NAME));
+            int flag = Context.BIND_AUTO_CREATE | Context.BIND_ABOVE_CLIENT;
 
-            ServiceConnection conn = new ServiceConnection() {
+            if (! mContext.bindService(intent, this, flag)) {
+                Log.w(TAG, "beforeHookedMethod: bind Service failed !");
+                return;
+            }
+            mWorkingClipData = clip;
+            param.setResult(null);
+        }
+
+        private Context mContext;
+        private ClipData mWorkingClipData;
+
+
+        private boolean startRequestActivity(final IClipMgr mgr,
+                                             final ClipData clip) {
+            final String pkg = mContext.getPackageName();
+
+            StringBuilder msg = new StringBuilder(64);
+            msg.append('\n')
+                    .append(PackageUtils.getAppName(mContext, pkg))
+                    .append("尝试修改剪贴板为: ");
+            for (int i = 0, n = clip == null ? 0 : clip.getItemCount(); i < n; i++) {
+                msg.append(clip.getItemAt(i).getText());
+            }
+
+            OnRequestFinishListener callback = new OnRequestFinishListener() {
                 @Override
-                public void onServiceConnected(ComponentName name, IBinder service) {
-                    IClipMgr mgr = IClipMgr.Stub.asInterface(service);
-                    try {
-                        ClipData clipData = mCaches.removeFirst();
-                        mgr.setPrimaryClip(c.getPackageName(), clipData);
-                    } catch (Exception e) {
-                        XposedBridge.log(e);
+                public void onRequestFinish(int result) throws RemoteException {
+                    int rule;
+                    if ((result & RESULT_NEGATIVE) != 0) {
+                        rule = PackageRule.RULE_DENY;
+                        mgr.saveActionRecord(pkg, clip, ActionRecord.ACTION_DENY);
+                    } else {
+                        rule = PackageRule.RULE_GRANT;
+                        mgr.saveActionRecord(pkg, clip, ActionRecord.ACTION_GRANT);
                     }
-                    c.unbindService(this);
-                }
-
-                @Override
-                public void onServiceDisconnected(ComponentName name) {
-
+                    if ((result & RESULT_REMEMBER) != 0) {
+                        mgr.setPackageRule(pkg, rule);
+                    }
+                    mContext.unbindService(HookSetPrimaryClipMethod.this);
                 }
             };
+            RequestActivity.Builder builder = new RequestActivity.Builder()
+                    .setTitle("放开我的剪贴板")
+                    .setMessage(msg.toString())
+                    .setCancelable(false)
+                    .setPositive("确定")
+                    .setNegative("拒绝")
+                    .setRemember("记住我的选择")
+                    .setCallback(callback);
+            try {
+                Activity activity;
+                boolean isRadicalMode = mgr.isRadicalMode();
+                Log.i(TAG, "startRequestActivity: isRadicalMode: " + isRadicalMode);
 
-            if (! c.bindService(intent, conn, Context.BIND_AUTO_CREATE)) {
-                XposedBridge.log(c.getPackageName() + "failed to bind service");
-                return;
+                if (mgr.isRadicalMode() && (activity = getTopActivity()) != null) {
+                    Log.i(TAG, "startRequestActivity: topActivity: " + activity);
+                    builder.buildDialog(activity).show();
+                } else {
+                    Intent intent = builder.build();
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    mContext.startActivity(intent);
+                }
+
+                return true;
+            } catch (Exception e) {
+                Log.e(TAG, "startRequestActivity: ", e);
             }
-            mCaches.addLast(clip);
-            param.setResult(null);
+            return false;
+        }
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            ClipData clip = mWorkingClipData;
+            mWorkingClipData = null;
+            String pkg = mContext.getPackageName();
+
+            Log.i(TAG, "onServiceConnected: " + pkg + " " + clip);
+
+            try {
+                IClipMgr mgr = IClipMgr.Stub.asInterface(service);
+                int rule = mgr.getPackageRule(pkg);
+                Log.i(TAG, "onServiceConnected: " + rule);
+
+                switch (rule) {
+                    case PackageRule.RULE_REQUEST: {
+                        if (startRequestActivity(mgr, clip)) {
+                            return; // 直接返回以保留 IBinder
+                        }
+                        break;
+                    }
+                    case PackageRule.RULE_GRANT: {
+                        mgr.saveActionRecord(pkg, clip, ActionRecord.ACTION_GRANT);
+                        break;
+                    }
+                    case PackageRule.RULE_DENY: {
+                        mgr.saveActionRecord(pkg, clip, ActionRecord.ACTION_DENY);
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "onServiceConnected: ", e);
+            }
+            mContext.unbindService(this);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
         }
     }
 }

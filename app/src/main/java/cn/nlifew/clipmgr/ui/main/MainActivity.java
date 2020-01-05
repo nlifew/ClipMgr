@@ -2,6 +2,7 @@ package cn.nlifew.clipmgr.ui.main;
 
 
 import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.support.design.widget.TabLayout;
 import android.support.v4.content.LocalBroadcastManager;
@@ -30,6 +31,9 @@ public class MainActivity extends BaseActivity implements
 
     public static final String EXTRA_SEARCH_APP_TEXT    =   "EXTRA_SEARCH_APP_TEXT";
 
+
+    private Menu mOptionsMenu;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,18 +51,14 @@ public class MainActivity extends BaseActivity implements
 
         Settings settings = Settings.getInstance(this);
         if (settings.isFirstOpen()) {
-            settings.setFirstOpen(false);
             showAboutDialog();
         }
     }
 
     private void showAboutDialog() {
-        String msg = "如果您正在使用 Android Q，本应用是没必要的，" +
-                "Android Q 限制了非输入法非焦点应用对剪贴板的访问——" +
-                "模块也不会对 Android Q 进行适配\n" +
-                "这个 Xposed 模块通过 hook ClipboardManager.setPrimary() 函数，" +
-                "来拦截所有试图修改剪贴板的操作\n" +
-                "app 使用了一些 Android 隐藏的 API，如果您的厂商更改了这些接口，可能会无法使用\n" +
+        String msg = "这个 Xposed 模块通过 hook ClipboardManager.setPrimary() 函数，" +
+                "来拦截所有试图修改剪贴板的操作\n\n" +
+                "app 使用了一些 Android 隐藏的 API，如果您的厂商更改了这些接口，可能会无法使用\n\n" +
                 "作者：coolapk @ablist97";
 
         new AlertDialog.Builder(this)
@@ -68,9 +68,9 @@ public class MainActivity extends BaseActivity implements
                 .show();
     }
 
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        mOptionsMenu = menu;
         getMenuInflater().inflate(R.menu.activity_main, menu);
 
         SearchView searchView = (SearchView) menu
@@ -82,12 +82,14 @@ public class MainActivity extends BaseActivity implements
 
         Settings settings = Settings.getInstance(this);
 
-        MenuItem item = menu.findItem(R.id.activity_main_system);
-        item.setChecked(settings.isShowSystemApp());
+        MenuItem showSystemApp = menu.findItem(R.id.activity_main_system);
+        showSystemApp.setChecked(settings.isShowSystemApp());
+
+        MenuItem radicalMode = menu.findItem(R.id.activity_main_radical_mode);
+        radicalMode.setChecked(settings.isRadicalMode());
 
         return true;
     }
-
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -110,11 +112,48 @@ public class MainActivity extends BaseActivity implements
                         .sendBroadcast(intent);
                 return true;
             }
+            case R.id.activity_main_radical_mode: {
+                boolean enabled = item.isChecked();
+                if (enabled) {
+                    item.setChecked(false);
+                    Settings.getInstance(this)
+                            .setRadicalMode(false);
+                } else {
+                    showRadicalModeDialog();
+                }
+                return true;
+            }
         }
 
         return super.onOptionsItemSelected(item);
     }
 
+    private void showRadicalModeDialog() {
+        String msg = "开启激进模式后，app 会尝试在宿主应用直接展示 Dialog，" +
+                "以解决后台死亡问题。\n\n" +
+                "这个模式不能保证兼容性，而且不同应用会有不同的 Dialog 样式。" +
+                "如果现在正常工作，请不要开启。";
+
+        DialogInterface.OnClickListener cli = new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+                if (which == DialogInterface.BUTTON_POSITIVE) {
+                    Settings.getInstance(MainActivity.this)
+                            .setRadicalMode(true);
+                    mOptionsMenu.findItem(R.id.activity_main_radical_mode)
+                            .setChecked(true);
+                }
+            }
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.app_name)
+                .setMessage(msg)
+                .setPositiveButton("开启", cli)
+                .setNegativeButton("取消", cli)
+                .show();
+    }
 
     @Override
     public boolean onQueryTextSubmit(String query) {
