@@ -1,4 +1,13 @@
 <resources>
     <string name="app_name">放开我的剪贴板</string>
     <string name="xposed_module_description">记录并拦截所有试图修改剪贴板的操作</string>
+
+    <string name="options_search">搜索</string>
+    <string name="options_show_system">显示系统应用</string>
+    <string name="options_clear_history">清除历史记录</string>
+    <string name="options_radical_mode">激进模式</string>
+    <string name="options_about">关于</string>
+
+    <string name="title_app">应用程序</string>
+    <string name="title_history">使用记录</string>
 </resources>

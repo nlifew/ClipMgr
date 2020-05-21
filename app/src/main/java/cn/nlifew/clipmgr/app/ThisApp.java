@@ -1,17 +1,26 @@
 package cn.nlifew.clipmgr.app;
 
-import android.app.Activity;
-import android.app.ActivityManager;
+
+
+import android.app.Application;
 import android.content.Context;
-import android.os.Bundle;
-import android.support.annotation.CallSuper;
+import android.os.Handler;
+import android.os.Looper;
 
 import org.litepal.LitePalApplication;
 
-import java.lang.ref.WeakReference;
 
 public class ThisApp extends LitePalApplication {
     private static final String TAG = "ThisApp";
 
+    public static final Handler mH = new Handler(Looper.getMainLooper());
+
+    public static Application currentApplication;
+
+    @Override
+    protected void attachBaseContext(Context base) {
+        super.attachBaseContext(base);
+        currentApplication = this;
+    }
 
 }

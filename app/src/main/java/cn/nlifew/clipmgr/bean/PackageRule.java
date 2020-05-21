@@ -6,12 +6,18 @@ import android.os.Parcelable;
 import org.litepal.crud.LitePalSupport;
 
 public final class PackageRule extends LitePalSupport implements Parcelable {
+    public static final int RULE_REQUEST    =   0;
     public static final int RULE_GRANT      =   1;
     public static final int RULE_DENY       =   2;
-    public static final int RULE_REQUEST    =   0;
 
-    public static final String COLUMN_PACKAGE   =   "pkg";
-    public static final String COLUMN_RULE      =   "rule";
+    public static final class Column {
+        public static final String PACKAGE = "pkg";
+        public static final String RULE = "rule";
+    }
+
+    public static final class Table {
+        public static final String NAME = "PackageRule";
+    }
 
     public PackageRule(String pkg, int rule) {
         this.pkg = pkg;

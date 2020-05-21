@@ -1,12 +1,18 @@
 package android.app;
 
+import android.os.IBinder;
+
+import java.util.HashMap;
+import java.util.Map;
+
 public class ActivityThread {
 
     static final class ActivityClientRecord {
         // Activity activity;
     }
 
-//    final ArrayMap<IBinder, ActivityClientRecord> mActivities = new ArrayMap<>();
+    // 这个类型不稳定，有的机型上是 ArrayMap 有的是 Map
+    final Map<IBinder, ActivityClientRecord> mActivities = new HashMap<>();
 
     public static Application currentApplication() {
         // just compat

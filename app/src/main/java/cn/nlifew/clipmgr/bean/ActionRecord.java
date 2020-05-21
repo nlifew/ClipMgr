@@ -7,6 +7,19 @@ import android.os.Parcelable;
 import org.litepal.crud.LitePalSupport;
 
 public final class ActionRecord extends LitePalSupport implements Parcelable {
+    public static final class Column {
+        public static final String PACKAGE = "pkg";
+        public static final String TIME = "time";
+        public static final String APP_NAME = "appName";
+        public static final String TEXT = "text";
+        public static final String ACTION = "action";
+    }
+
+    public static final class Table {
+        public static final String NAME = "ActionRecord";
+    }
+
+
     public static final int ACTION_DENY     =   1;
     public static final int ACTION_GRANT    =   0;
 

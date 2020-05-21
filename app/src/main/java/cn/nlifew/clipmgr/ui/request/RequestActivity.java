@@ -12,13 +12,14 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
 
 import cn.nlifew.clipmgr.BuildConfig;
 import cn.nlifew.clipmgr.ui.BaseActivity;
@@ -27,9 +28,15 @@ import cn.nlifew.clipmgr.util.DisplayUtils;
 public class RequestActivity extends BaseActivity  {
     private static final String TAG = "RequestActivity";
 
+    private static final String PREFIX = RequestActivity.class.getName();
+
+    public static final String ACTION_ACTIVITY_HAS_FOCUS =
+            PREFIX + ".ACTION_ACTIVITY_HAS_FOCUS";
+
     public static final class Builder implements Parcelable {
         private static final String TAG = "Builder";
-        private static final String EXTRA_BUILDER = TAG + ".EXTRA_BUILDER";
+        private static final String EXTRA_BUILDER =
+                Builder.class.getName() + ".EXTRA_BUILDER";
 
         String mIcon;
         String mTitle;
@@ -37,6 +44,7 @@ public class RequestActivity extends BaseActivity  {
         String mPositive;
         String mNegative;
         String mRemember;
+        String mPackageName;
         boolean mCancelable;
         IRequestFinish mCallback;
 
@@ -78,6 +86,11 @@ public class RequestActivity extends BaseActivity  {
             return this;
         }
 
+        public Builder setPackageName(String packageName) {
+            this.mPackageName = packageName;
+            return this;
+        }
+
         public Builder setCallback(OnRequestFinishListener callback) {
             this.mCallback = callback;
             return this;
@@ -110,6 +123,7 @@ public class RequestActivity extends BaseActivity  {
             dest.writeString(this.mPositive);
             dest.writeString(this.mNegative);
             dest.writeString(this.mRemember);
+            dest.writeString(this.mPackageName);
             dest.writeByte(this.mCancelable ? (byte) 1 : (byte) 0);
             dest.writeStrongBinder(this.mCallback == null ? null :
                     this.mCallback.asBinder());
@@ -122,6 +136,7 @@ public class RequestActivity extends BaseActivity  {
             this.mPositive = in.readString();
             this.mNegative = in.readString();
             this.mRemember = in.readString();
+            this.mPackageName = in.readString();
             this.mCancelable = in.readByte() != 0;
             this.mCallback = IRequestFinish.Stub.asInterface(in.readStrongBinder());
         }
@@ -157,6 +172,7 @@ public class RequestActivity extends BaseActivity  {
         private AlertDialog.Builder buildAlertDialog() {
             AlertDialog.Builder builder = new AlertDialog.Builder(mActivity,
                     android.R.style.Theme_Material_Light_Dialog_NoActionBar_MinWidth);
+
             builder.setMessage(mBuilder.mMessage)
                     .setCancelable(mBuilder.mCancelable)
                     .setOnCancelListener(this);
@@ -179,7 +195,7 @@ public class RequestActivity extends BaseActivity  {
                         ViewGroup.LayoutParams.WRAP_CONTENT
                 ));
                 int dp20 = DisplayUtils.dp2px(mActivity, 20);
-                layout.setPadding(dp20, 0, dp20, 0);
+                layout.setPadding(dp20, dp20 / 2, dp20, dp20 / 2);
 
                 mCheckBox = new CheckBox(mActivity);
                 ViewGroup.MarginLayoutParams lp = new ViewGroup.MarginLayoutParams(
@@ -192,6 +208,7 @@ public class RequestActivity extends BaseActivity  {
                 TextView tv = new TextView(mActivity);
                 tv.setText(mBuilder.mRemember);
                 tv.setGravity(Gravity.CENTER_VERTICAL);
+                tv.setTextColor(0xFF737373);
                 layout.addView(tv,
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.MATCH_PARENT);
@@ -260,6 +277,7 @@ public class RequestActivity extends BaseActivity  {
     }
 
     private DialogHelper mHelper;
+    private boolean mShouldNotifyRequest = true;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -274,6 +292,26 @@ public class RequestActivity extends BaseActivity  {
         mHelper = new DialogHelper(this, builder);
         mHelper.buildAlertDialog().show();
     }
+
+    @Override
+    protected void onResume() {
+        Log.i(TAG, "onResume: start");
+        super.onResume();
+
+        if (mShouldNotifyRequest) {
+            mShouldNotifyRequest = false;
+
+            Intent intent = new Intent(ACTION_ACTIVITY_HAS_FOCUS);
+
+            String packageName = mHelper.mBuilder.mPackageName;
+            if (packageName != null) {
+                intent.setPackage(packageName);
+            }
+
+            sendBroadcast(intent);
+        }
+    }
+
 
     @Override
     protected void onDestroy() {

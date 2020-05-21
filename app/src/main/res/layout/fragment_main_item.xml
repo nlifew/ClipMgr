@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.v7.widget.CardView
+<androidx.cardview.widget.CardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_marginStart="10dp"
     android:layout_marginEnd="10dp"
     android:layout_marginTop="5dp"
@@ -15,36 +16,43 @@
         android:layout_height="60dp">
 
         <ImageView
-            android:id="@+id/fragment_main_rule_item_icon"
+            android:id="@+id/icon"
             android:layout_width="50dp"
             android:layout_height="50dp"
-            android:layout_margin="5dp" />
+            android:layout_margin="5dp"
+            tools:src="@mipmap/ic_launcher_round"/>
+
         <TextView
-            android:id="@+id/fragment_main_rule_item_action"
+            android:id="@+id/action"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_margin="5dp" />
+            android:layout_margin="5dp"
+            tools:text="拒绝"/>
+
         <TextView
-            android:id="@+id/fragment_main_rule_item_label"
-            android:layout_toEndOf="@id/fragment_main_rule_item_icon"
-            android:layout_toStartOf="@id/fragment_main_rule_item_action"
-            android:layout_alignTop="@id/fragment_main_rule_item_icon"
+            android:id="@+id/label"
+            android:layout_toEndOf="@id/icon"
+            android:layout_toStartOf="@id/action"
+            android:layout_alignTop="@id/icon"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textStyle="bold"
             android:textSize="16sp"
             android:maxLines="1"
-            android:ellipsize="end"/>
+            android:ellipsize="end"
+            tools:text="@string/app_name" />
+
         <TextView
-            android:id="@+id/fragment_main_rule_item_pkg"
-            android:layout_toEndOf="@id/fragment_main_rule_item_icon"
-            android:layout_toStartOf="@id/fragment_main_rule_item_action"
-            android:layout_alignBottom="@id/fragment_main_rule_item_icon"
+            android:id="@+id/pkg"
+            android:layout_toEndOf="@id/icon"
+            android:layout_toStartOf="@id/action"
+            android:layout_alignBottom="@id/icon"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:maxLines="1"
-            android:ellipsize="end" />
+            android:ellipsize="end"
+            tools:text="cn.nlifew.clipmgr"/>
     </RelativeLayout>
-</android.support.v7.widget.CardView>
+</androidx.cardview.widget.CardView>

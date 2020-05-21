@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/options_search"
+        android:title="@string/options_search"
+        android:icon="@drawable/ic_search_white_24dp"
+        app:actionViewClass="androidx.appcompat.widget.SearchView"
+        app:showAsAction="always"/>
+
+    <item
+        android:id="@+id/options_show_system"
+        android:title="@string/options_show_system"
+        android:checkable="true" />
+
+    <item
+        android:id="@+id/options_clear_history"
+        android:title="@string/options_clear_history" />
+
+    <item
+        android:id="@+id/options_radical_mode"
+        android:title="@string/options_radical_mode"
+        android:checkable="true" />
+
+    <item
+        android:id="@+id/options_about"
+        android:title="@string/options_about" />
+</menu>

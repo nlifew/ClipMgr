@@ -12,15 +12,15 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
-        <service
-            android:name=".service.ClipMgrService"
-            android:enabled="true"
-            android:exported="true" />
+        <provider
+            android:name=".provider.ExportedProvider"
+            android:authorities="cn.nlifew.clipmgr.provider"
+            android:exported="true"
+            />
 
         <activity
             android:name=".ui.main.MainActivity"
             android:theme="@style/AppTheme.NoActionBar">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -38,13 +38,12 @@
             android:name="xposedminversion"
             android:value="54" />
 
-        <activity android:name=".ui.EmptyActivity">
-        </activity>
-
-        <activity android:name=".ui.request.RequestActivity"
+        <activity android:name=".ui.EmptyActivity"></activity>
+        <activity
+            android:name=".ui.request.RequestActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
-            android:theme="@style/Transparent"
-            android:excludeFromRecents="true" />
+            android:theme="@style/Transparent" />
     </application>
 
 </manifest>

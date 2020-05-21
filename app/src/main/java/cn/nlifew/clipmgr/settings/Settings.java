@@ -5,6 +5,8 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 
+import java.util.Map;
+
 import cn.nlifew.clipmgr.BuildConfig;
 
 public final class Settings {
@@ -44,13 +46,13 @@ public final class Settings {
         mPref.edit().putBoolean(KEY_SHOW_SYSTEM_APP, show).apply();
     }
 
-    public boolean isFirstOpen() {
+    public int getVersionCode() {
         // 这个 key 在 versionCode 为 5 的时候添加
-        boolean first = BuildConfig.VERSION_CODE > mPref.getInt(KEY_VERSION_CODE, 5);
-        if (first) {
-            mPref.edit().putInt(KEY_VERSION_CODE, BuildConfig.VERSION_CODE).apply();
-        }
-        return first;
+        return mPref.getInt(KEY_VERSION_CODE, 5);
+    }
+
+    public void setVersionCode(int code) {
+        mPref.edit().putInt(KEY_VERSION_CODE, code).apply();
     }
 
     public boolean isRadicalMode() {
@@ -60,4 +62,6 @@ public final class Settings {
     public void setRadicalMode(boolean enable) {
         mPref.edit().putBoolean(KEY_RADICAL_MODE, enable).apply();
     }
+
+    public Map<String, ?> getAll() { return mPref.getAll(); }
 }
