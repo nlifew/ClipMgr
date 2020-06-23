@@ -62,7 +62,8 @@ public class MainActivity extends BaseActivity implements
                     .setCancelable(false)
                     .setTitle("失败")
                     .setMessage(msg)
-                    .setPositiveButton("卸载", cli);
+                    .setPositiveButton("卸载", cli)
+                    .show();
         }
     }
 
