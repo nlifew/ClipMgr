@@ -19,11 +19,6 @@
         android:title="@string/options_clear_history" />
 
     <item
-        android:id="@+id/options_radical_mode"
-        android:title="@string/options_radical_mode"
-        android:checkable="true" />
-
-    <item
         android:id="@+id/options_about"
         android:title="@string/options_about" />
 </menu>

@@ -13,6 +13,7 @@ import android.os.Message;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
@@ -209,6 +210,7 @@ public class RequestActivity extends BaseActivity  {
                 tv.setText(mBuilder.mRemember);
                 tv.setGravity(Gravity.CENTER_VERTICAL);
                 tv.setTextColor(0xFF737373);
+                tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
                 layout.addView(tv,
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.MATCH_PARENT);

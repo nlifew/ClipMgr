@@ -1,6 +1,8 @@
 package cn.nlifew.clipmgr.ui.main;
 
+import android.app.Activity;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -21,6 +23,8 @@ import cn.nlifew.clipmgr.R;
 import cn.nlifew.clipmgr.provider.ExportedProvider;
 import cn.nlifew.clipmgr.settings.Settings;
 import cn.nlifew.clipmgr.ui.BaseActivity;
+import cn.nlifew.clipmgr.util.DirtyUtils;
+import cn.nlifew.clipmgr.util.PackageUtils;
 
 public class MainActivity extends BaseActivity implements
         SearchView.OnQueryTextListener,
@@ -42,6 +46,24 @@ public class MainActivity extends BaseActivity implements
         tabLayout.setupWithViewPager(pager);
 
         mViewModel = new ViewModelProvider(this).get(MainViewModel.class);
+
+        Activity activity = DirtyUtils.getTopActivity();
+        if (activity == null) {
+            String msg = "我无法在你的设备上无法获取活动的 Activity，" +
+                    "可能是您的厂商更改了相关接口\n\n" +
+                    "您不应该继续使用该 app，并立即卸载之";
+
+            DialogInterface.OnClickListener cli = (dialog, which) -> {
+                dialog.dismiss();
+                PackageUtils.uninstall(MainActivity.this, getPackageName());
+            };
+
+            new AlertDialog.Builder(this)
+                    .setCancelable(false)
+                    .setTitle("失败")
+                    .setMessage(msg)
+                    .setPositiveButton("卸载", cli);
+        }
     }
 
     private MainViewModel mViewModel;
@@ -64,9 +86,6 @@ public class MainActivity extends BaseActivity implements
     public boolean onPrepareOptionsMenu(Menu menu) {
         Settings settings = Settings.getInstance(this);
 
-        menu.findItem(R.id.options_radical_mode)
-                .setChecked(settings.isRadicalMode());
-
         menu.findItem(R.id.options_show_system)
                 .setChecked(settings.isShowSystemApp());
 
@@ -83,14 +102,6 @@ public class MainActivity extends BaseActivity implements
                 Settings.getInstance(this)
                         .setShowSystemApp(! item.isChecked());
                 mViewModel.clearAll();
-                return true;
-            case R.id.options_radical_mode:
-                if (item.isChecked()) {
-                    Settings.getInstance(this).setRadicalMode(false);
-                }
-                else {
-                    showRadicalDialog();
-                }
                 return true;
             case R.id.options_about:
                 showAboutDialog();
@@ -109,25 +120,6 @@ public class MainActivity extends BaseActivity implements
                 .setTitle(R.string.app_name)
                 .setMessage(msg)
                 .setPositiveButton("确定", null)
-                .show();
-    }
-
-    private void showRadicalDialog() {
-        DialogInterface.OnClickListener cli = (dialog, which) -> {
-            dialog.dismiss();
-            if (which == DialogInterface.BUTTON_POSITIVE) {
-                Settings.getInstance(this).setRadicalMode(true);
-                invalidateOptionsMenu();
-            }
-        };
-
-        new AlertDialog.Builder(this)
-                .setTitle("警告")
-                .setMessage("开启激进模式后，应用会尝试在宿主进程直接打开 Dialog，以解决无法弹窗问题。\n" +
-                        "激进模式无法保证兼容性，而且其 Dialog 样式会随着宿主进程的不同而不同。\n" +
-                        "如果现在工作正常，请不要开启。")
-                .setPositiveButton("确定", cli)
-                .setNegativeButton("取消", cli)
                 .show();
     }
 

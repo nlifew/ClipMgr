@@ -11,7 +11,7 @@ public class ActivityThread {
         // Activity activity;
     }
 
-    // 这个类型不稳定，有的机型上是 ArrayMap 有的是 Map
+    // HashMap or Map or ArrayMap
     final Map<IBinder, ActivityClientRecord> mActivities = new HashMap<>();
 
     public static Application currentApplication() {

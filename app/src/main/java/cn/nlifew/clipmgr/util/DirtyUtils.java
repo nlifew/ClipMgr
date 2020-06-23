@@ -10,7 +10,6 @@ import java.util.Map;
 public class DirtyUtils {
     private static final String TAG = "DirtyUtils";
 
-
     private static boolean sIgnoreGetTopActivity;
 
     private static Field sActivitiesField;

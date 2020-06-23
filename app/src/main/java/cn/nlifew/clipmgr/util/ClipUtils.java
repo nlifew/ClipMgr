@@ -49,14 +49,21 @@ public class ClipUtils {
     public static void setPrimaryClip(Context context, ClipData clip) {
         ClipboardManager cm = (ClipboardManager) context
                 .getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cm != null) {
+        if (cm == null) {
+            Log.w(TAG, "setPrimaryClip: no ClipboardManager found");
+        } else {
             cm.setPrimaryClip(clip);
         }
     }
 
-    public static boolean equals(ClipData d1, ClipData d2) {
-        Log.d(TAG, "equals: [" + d1 + "/" + d2 + "]");
+    public static boolean hasPrimaryClip(Context context, ClipData clip) {
+        ClipboardManager cm = (ClipboardManager) context
+                .getSystemService(Context.CLIPBOARD_SERVICE);
+        return cm != null && equals(cm.getPrimaryClip(), clip);
+    }
 
+
+    public static boolean equals(ClipData d1, ClipData d2) {
         if (d1 == d2) {
             return true;
         }

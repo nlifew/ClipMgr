@@ -1,8 +1,11 @@
 package cn.nlifew.clipmgr.util;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.util.Log;
 
 public final class PackageUtils {
@@ -10,28 +13,10 @@ public final class PackageUtils {
 
     private PackageUtils() {  }
 
-    public static String getAppName(PackageManager pm, String pkg) {
-        try {
-            ApplicationInfo info = pm.getApplicationInfo(pkg, 0);
-            return info.loadLabel(pm).toString();
-        } catch (Exception e) {
-            Log.e(TAG, "getApplicationLabelByPackageName: " + pkg, e);
-        }
-        return "";
-    }
 
-    public static String getAppName(Context c, String pkg) {
-        return getAppName(c.getPackageManager(), pkg);
+    public static void uninstall(Activity activity, String packageName) {
+        Uri uri = Uri.fromParts("package", packageName, null);
+        Intent intent = new Intent(Intent.ACTION_DELETE, uri);
+        activity.startActivity(intent);
     }
-
-    public static boolean isPackageInstalled(Context c, String pkg) {
-        final PackageManager pm = c.getPackageManager();
-        try {
-            pm.getApplicationInfo(pkg, 0);
-            return true;
-        } catch (PackageManager.NameNotFoundException e) {
-            return false;
-        }
-    }
-
 }

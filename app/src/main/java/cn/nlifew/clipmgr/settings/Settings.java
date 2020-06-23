@@ -35,7 +35,6 @@ public final class Settings {
 
     public static final String PREF_NAME = "settings";
     public static final String KEY_SHOW_SYSTEM_APP  =   "show_system_app";
-    public static final String KEY_RADICAL_MODE     =   "radical_mode";
     public static final String KEY_VERSION_CODE     =   "version_code";
 
     public boolean isShowSystemApp() {
@@ -53,14 +52,6 @@ public final class Settings {
 
     public void setVersionCode(int code) {
         mPref.edit().putInt(KEY_VERSION_CODE, code).apply();
-    }
-
-    public boolean isRadicalMode() {
-        return mPref.getBoolean(KEY_RADICAL_MODE, false);
-    }
-
-    public void setRadicalMode(boolean enable) {
-        mPref.edit().putBoolean(KEY_RADICAL_MODE, enable).apply();
     }
 
     public Map<String, ?> getAll() { return mPref.getAll(); }
