@@ -46,6 +46,13 @@ public class MainActivity extends BaseActivity implements
         tabLayout.setupWithViewPager(pager);
 
         mViewModel = new ViewModelProvider(this).get(MainViewModel.class);
+    }
+
+    private MainViewModel mViewModel;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
 
         Activity activity = DirtyUtils.getTopActivity();
         if (activity == null) {
@@ -55,19 +62,17 @@ public class MainActivity extends BaseActivity implements
 
             DialogInterface.OnClickListener cli = (dialog, which) -> {
                 dialog.dismiss();
-                PackageUtils.uninstall(MainActivity.this, getPackageName());
+                finish();
             };
 
             new AlertDialog.Builder(this)
                     .setCancelable(false)
                     .setTitle("失败")
                     .setMessage(msg)
-                    .setPositiveButton("卸载", cli)
+                    .setPositiveButton("退出", cli)
                     .show();
         }
     }
-
-    private MainViewModel mViewModel;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
