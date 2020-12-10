@@ -3,79 +3,103 @@ package cn.nlifew.clipmgr.core;
 import android.app.Activity;
 import android.app.ActivityThread;
 import android.app.AlertDialog;
-import android.content.BroadcastReceiver;
+import android.app.Application;
+import android.content.IClipboard;
 import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
 import android.os.RemoteException;
-import android.system.Os;
 
-import androidx.annotation.NonNull;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
+import androidx.annotation.Nullable;
 
-import cn.nlifew.clipmgr.BuildConfig;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Objects;
+
 import cn.nlifew.clipmgr.bean.ActionRecord;
 import cn.nlifew.clipmgr.bean.PackageRule;
 import cn.nlifew.clipmgr.provider.ExportedProvider;
-import cn.nlifew.clipmgr.settings.Settings;
 import cn.nlifew.clipmgr.ui.request.OnRequestFinishListener;
 import cn.nlifew.clipmgr.ui.request.RequestActivity;
 import cn.nlifew.clipmgr.util.ClipUtils;
 import cn.nlifew.clipmgr.util.DirtyUtils;
-import cn.nlifew.clipmgr.util.ToastUtils;
-import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 
-public class XSetPrimaryClip extends XC_MethodHook {
-    private static final String MY_PACKAGE_NAME = BuildConfig.APPLICATION_ID;
+import static cn.nlifew.clipmgr.core.ClipHook.MY_PACKAGE_NAME;
 
+final class XSetPrimaryClip {
+    private static final String TAG = "XSetPrimaryClip";
 
-    private final class RequestFinishCallback extends OnRequestFinishListener {
-
-        RequestFinishCallback(Context context) {
-            mContext = context;
+    private static final class InvokeWrapper {
+        InvokeWrapper(IClipboard obj, Method method, Object[] args) {
+            mMethod = method;
+            mArgs = args;
+            mObject = obj;
         }
 
-        private final Context mContext;
+        private final IClipboard mObject;
+        private final Method mMethod;
+        private final Object[] mArgs;
+        private ClipData mClipData;
 
+        ClipData getClipData() {
+            if (mClipData == null) {
+                for (Object obj : mArgs) {
+                    if (obj instanceof ClipData) {
+                        mClipData = (ClipData) obj;
+                        break;
+                    }
+                }
+            }
+            return mClipData;
+        }
+
+        void invoke() {
+            try {
+                mMethod.invoke(mObject, mArgs);
+            } catch (IllegalAccessException
+                    | IllegalArgumentException
+                    | InvocationTargetException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public boolean equals(@Nullable Object obj) {
+            if (obj == this) return true;
+            if (! (obj instanceof InvokeWrapper)) return false;
+
+            InvokeWrapper o = (InvokeWrapper) obj;
+            return ClipUtils.equals(getClipData(), o.getClipData());
+        }
+    }
+
+    private final class RequestFinishCallback extends OnRequestFinishListener {
 
         @Override
         public void onRequestFinish(int result) throws RemoteException {
             XposedBridge.log("onRequestFinish: result = " + result);
             mRequestDialog = null; // 立即置空防止 setPrimaryClip 拦截
 
-            final int packageRule;
+            int packageRule = PackageRule.RULE_REQUEST;
+            final ClipData clipData = mWaitingInvoke.getClipData();
 
             if ((result & RESULT_NEGATIVE) != 0) {      // 禁止访问剪贴板
                 packageRule = PackageRule.RULE_DENY;
-                saveActionRecord(mContext, mWorkingClipData, ActionRecord.ACTION_DENY);
-                mWorkingClipData = null;
+                saveActionRecord(mContext, mPackageName, clipData, ActionRecord.ACTION_DENY);
+                mWaitingInvoke = null;
             }
-            else {                                      // 只要没有明确禁止，就允许访问
+            else if ((result & RESULT_POSITIVE) != 0) { // 允许访问剪贴板
                 packageRule = PackageRule.RULE_GRANT;
-                ClipUtils.setPrimaryClip(mContext, mWorkingClipData);
-                saveActionRecord(mContext, mWorkingClipData, ActionRecord.ACTION_GRANT);
+                saveActionRecord(mContext, mPackageName, clipData, ActionRecord.ACTION_GRANT);
+                mWaitingInvoke.invoke();
             }
 
             if ((result & RESULT_REMEMBER) != 0) {
@@ -86,89 +110,88 @@ public class XSetPrimaryClip extends XC_MethodHook {
         }
     }
 
-    private AlertDialog mRequestDialog;
-    private static ClipData mWorkingClipData;
-
-    private boolean startRequestActivity(Context context, ClipData clipData) {
-        // 尝试从 ActivityThread 中找到活动的 Activity
-        Activity activity = DirtyUtils.getTopActivity();
-        if (activity != null) {
-            XposedBridge.log("startRequestActivity: TopActivity found");
-
-            mWorkingClipData = clipData;
-
-            ApplicationInfo info = context.getApplicationInfo();
-
-            mRequestDialog = new RequestActivity.Builder()
-                    .setPackageName(context.getPackageName())
-                    .setCancelable(false)
-                    .setPositive("允许")
-                    .setNegative("拒绝")
-                    .setRemember("记住我的选择")
-                    .setMessage(clip2SimpleText(clipData))
-                    .setCallback(new RequestFinishCallback(context))
-                    .buildDialog(activity)
-                    .setIcon(info.icon)
-                    .setTitle(info.labelRes)
-                    .show();
-            return true;
-        }
-        /* 由于某些原因无法找到活动的 Activity，
-         * 拦截掉此次操作
-         * 可能的失败原因：
-         * 1. Android 9 及以上限制了反射
-         * 2. 厂商对 ActivityThread 进行了修改
-         * 3. 本来就没有活动 Activity
-         */
-        XposedBridge.log("startRequestActivity: TopActivity NOT found");
-        saveActionRecord(context, clipData, ActionRecord.ACTION_DENY);
-        return true;
+    XSetPrimaryClip() {
+        mContext = ActivityThread.currentApplication();
+        mPackageName = mContext.getPackageName();
     }
 
-    @Override
-    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-        final ClipData clipData = (ClipData) param.args[0];
-        final Context context = ActivityThread.currentApplication();
-        final String packageName = context.getPackageName();
+    private AlertDialog mRequestDialog;
+    private final Application mContext;
+    private final String mPackageName;
+    private InvokeWrapper mWaitingInvoke;
 
-        logMethodParam(param);
+    void setPrimaryClip(IClipboard obj, Method method, Object[] args) {
+        final InvokeWrapper wrapper = new InvokeWrapper(obj, method, args);
+        final ClipData clipData = wrapper.getClipData();
 
-        // 过滤掉不该拦截的
-        if (ClipUtils.equals(mWorkingClipData, clipData) ||
-                MY_PACKAGE_NAME.equals(packageName)) {
-            XposedBridge.log("beforeHookedMethod: clip data is in whitelist, return");
-            return;
-        }
-        // 如果正在展示对话框，更新对话框
+        // 如果正在展示对话框，更新对话框信息
         if (mRequestDialog != null) {
-            XposedBridge.log("beforeHookedMethod: dialog is showing, update");
-
-            mRequestDialog.setMessage(clip2SimpleText(clipData));
-            mWorkingClipData = clipData;
-            param.setResult(null);
+            XposedBridge.log(TAG + ": setPrimaryClip: dialog is showing, update");
+            mWaitingInvoke = wrapper;
+            updateRequestDialog(clipData);
             return;
         }
 
-        final int rule = findRuleByPackageName(context, packageName);
-        XposedBridge.log("beforeHookedMethod: the rule for " + packageName + " is: " + rule);
+        final int rule = XSetPrimaryClip.getPackageRule(mContext, mPackageName);
+        XposedBridge.log(TAG + ": setPrimaryClip: the rule of " + mPackageName +
+                " is " + rule);
 
         switch (rule) {
-            case PackageRule.RULE_GRANT:        // 授权访问剪贴板
-                saveActionRecord(context, clipData, ActionRecord.ACTION_GRANT);
+            case PackageRule.RULE_DENY:         // 授权访问剪贴板
+                XSetPrimaryClip.saveActionRecord(mContext, mPackageName,
+                        clipData, ActionRecord.ACTION_DENY);
+                wrapper.invoke();
                 break;
-            case PackageRule.RULE_DENY:         // 拒绝访问剪贴板
-                saveActionRecord(context, clipData, ActionRecord.ACTION_DENY);
-                param.setResult(null);
+            case PackageRule.RULE_GRANT:        // 拒绝访问剪贴板
+                XSetPrimaryClip.saveActionRecord(mContext, mPackageName,
+                        clipData, ActionRecord.ACTION_GRANT);
                 break;
             case PackageRule.RULE_REQUEST:      // 请求用户授权
-                if (startRequestActivity(context, clipData)) {
-                    param.setResult(null);
+                Activity activity = DirtyUtils.getTopActivity();
+                XposedBridge.log(TAG + ": setPrimaryClip: TopActivity " + activity);
+
+                if (activity != null) {
+                    mWaitingInvoke = wrapper;
+                    showRequestDialog(activity, clipData);
+                }
+                else {
+                    /* 由于某些原因无法找到活动的 Activity，拦截掉此次操作
+                     * 可能的失败原因：
+                     * 1. Android 9 及以上限制了反射
+                     * 2. 厂商对 ActivityThread 进行了修改
+                     * 3. 本来就没有活动 Activity
+                     */
+                    saveActionRecord(mContext, mPackageName, clipData, ActionRecord.ACTION_DENY);
                 }
                 break;
         }
     }
 
-    private static int findRuleByPackageName(Context context, String packageName) {
+    private void updateRequestDialog(ClipData clipData) {
+        mRequestDialog.setMessage(XSetPrimaryClip.clip2SimpleText(clipData));
+    }
+
+    private void showRequestDialog(Activity activity, ClipData clipData) {
+        ApplicationInfo info = mContext.getApplicationInfo();
+        mRequestDialog = new RequestActivity.Builder()
+                .setPackageName(mPackageName)
+                .setCancelable(false)
+                .setPositive("允许")
+                .setNegative("拒绝")
+                .setRemember("记住我的选择")
+                .setMessage(clip2SimpleText(clipData))
+                .setCallback(new RequestFinishCallback())
+                .buildDialog(activity)
+                .setIcon(info.icon)
+                .setTitle(info.labelRes)
+                .show();
+    }
+
+    private static int getPackageRule(Context context, String packageName) {
+        if (Objects.equals(MY_PACKAGE_NAME, packageName)) {
+            return PackageRule.RULE_GRANT;
+        }
+
         Cursor cursor = null;
         try {
             Uri uri = Uri.parse("content://" + ExportedProvider.AUTHORITY
@@ -189,15 +212,14 @@ public class XSetPrimaryClip extends XC_MethodHook {
         return PackageRule.RULE_REQUEST;
     }
 
-    private static void saveActionRecord(Context context, ClipData clipData, int action) {
-        String packageName = context.getPackageName();
+    private static void saveActionRecord(Context context, String packageName,
+                                 ClipData clipData, int action) {
 
         ContentValues values = new ContentValues();
         values.put(ActionRecord.Column.PACKAGE, packageName);
         values.put(ActionRecord.Column.ACTION, action);
         values.put(ActionRecord.Column.TEXT, ClipUtils.clip2String(clipData));
         values.put(ActionRecord.Column.TIME, System.currentTimeMillis());
-
 
         try {
             PackageManager pm = context.getPackageManager();
@@ -233,15 +255,5 @@ public class XSetPrimaryClip extends XC_MethodHook {
                 .append("\n尝试修改剪贴板为：");
         ClipUtils.clip2SimpleString(clipData, sb);
         return sb.toString();
-    }
-
-    private static void logMethodParam(MethodHookParam param) {
-        Context context = ActivityThread.currentApplication();
-        ClipData clipData = (ClipData) param.args[0];
-
-        XposedBridge.log("logMethodParam: " +
-                context.getPackageName() + ":" + Os.getpid() + " " +
-                "[" + clipData + "/" + mWorkingClipData + "] = [" +
-                ClipUtils.equals(clipData, mWorkingClipData));
     }
 }

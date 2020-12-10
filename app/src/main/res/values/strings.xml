@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">放开我的剪贴板</string>
-    <string name="xposed_module_description">记录并拦截所有试图修改剪贴板的操作</string>
+    <string name="xposed_module_description">
+        这个 Xposed 模块通过动态代理 IClipboard 实现对访问剪贴板的拦截。
+        app使用了一些 Android 隐藏的 API，如果您的厂商更改了这些接口，可能会无法使用。
+        作者：coolapk @ablist97
+    </string>
 
     <string name="options_search">搜索</string>
     <string name="options_show_system">显示系统应用</string>

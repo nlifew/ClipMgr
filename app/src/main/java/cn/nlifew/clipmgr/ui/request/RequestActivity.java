@@ -14,6 +14,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.Log;
 import android.util.TypedValue;
+import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
@@ -21,6 +22,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.StyleRes;
 
 import cn.nlifew.clipmgr.BuildConfig;
 import cn.nlifew.clipmgr.ui.BaseActivity;
@@ -171,8 +173,9 @@ public class RequestActivity extends BaseActivity  {
         }
 
         private AlertDialog.Builder buildAlertDialog() {
-            AlertDialog.Builder builder = new AlertDialog.Builder(mActivity,
-                    android.R.style.Theme_Material_Light_Dialog_NoActionBar_MinWidth);
+            final @StyleRes int theme = android.R.style.Theme_Material_Light_Dialog_NoActionBar_MinWidth;
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(mActivity, theme);
 
             builder.setMessage(mBuilder.mMessage)
                     .setCancelable(mBuilder.mCancelable)
@@ -190,7 +193,9 @@ public class RequestActivity extends BaseActivity  {
                 builder.setNegativeButton(mBuilder.mNegative, this);
             }
             if (mBuilder.mRemember != null) {
-                LinearLayout layout = new LinearLayout(mActivity);
+                ContextThemeWrapper context = new ContextThemeWrapper(mActivity, theme);
+
+                LinearLayout layout = new LinearLayout(context);
                 layout.setLayoutParams(new LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.WRAP_CONTENT
@@ -198,7 +203,7 @@ public class RequestActivity extends BaseActivity  {
                 int dp20 = DisplayUtils.dp2px(mActivity, 20);
                 layout.setPadding(dp20, dp20 / 2, dp20, dp20 / 2);
 
-                mCheckBox = new CheckBox(mActivity);
+                mCheckBox = new CheckBox(context);
                 ViewGroup.MarginLayoutParams lp = new ViewGroup.MarginLayoutParams(
                         ViewGroup.LayoutParams.WRAP_CONTENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
@@ -206,7 +211,7 @@ public class RequestActivity extends BaseActivity  {
                 lp.rightMargin = dp20 / 2;
                 layout.addView(mCheckBox, lp);
 
-                TextView tv = new TextView(mActivity);
+                TextView tv = new TextView(context);
                 tv.setText(mBuilder.mRemember);
                 tv.setGravity(Gravity.CENTER_VERTICAL);
                 tv.setTextColor(0xFF737373);

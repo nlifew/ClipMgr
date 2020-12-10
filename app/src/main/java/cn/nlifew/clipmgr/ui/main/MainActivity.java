@@ -1,5 +1,6 @@
 package cn.nlifew.clipmgr.ui.main;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
@@ -98,6 +99,7 @@ public class MainActivity extends BaseActivity implements
         return true;
     }
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -117,14 +119,9 @@ public class MainActivity extends BaseActivity implements
     }
 
     private void showAboutDialog() {
-        String msg = "这个 Xposed 模块通过 hook ClipboardManager.setPrimary() 函数，" +
-                "来拦截所有试图修改剪贴板的操作\n\n" +
-                "app 使用了一些 Android 隐藏的 API，如果您的厂商更改了这些接口，可能会无法使用\n\n" +
-                "作者：coolapk @ablist97";
-
         new AlertDialog.Builder(this)
                 .setTitle(R.string.app_name)
-                .setMessage(msg)
+                .setMessage(R.string.xposed_module_description)
                 .setPositiveButton("确定", null)
                 .show();
     }

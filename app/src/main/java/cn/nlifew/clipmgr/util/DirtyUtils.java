@@ -21,7 +21,6 @@ public class DirtyUtils {
             return null;
         }
         try {
-
             if (sActivitiesField == null) {
                 sActivitiesField = ReflectUtils.getDeclaredField(
                         ActivityThread.class, "mActivities"

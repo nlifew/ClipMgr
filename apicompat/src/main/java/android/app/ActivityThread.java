@@ -15,11 +15,10 @@ public class ActivityThread {
     final Map<IBinder, ActivityClientRecord> mActivities = new HashMap<>();
 
     public static Application currentApplication() {
-        // just compat
-        return new Application();
+        throw new UnsupportedOperationException("currentApplication");
     }
 
     public static ActivityThread currentActivityThread() {
-        return new ActivityThread();
+        throw new UnsupportedOperationException("currentActivityThread");
     }
 }

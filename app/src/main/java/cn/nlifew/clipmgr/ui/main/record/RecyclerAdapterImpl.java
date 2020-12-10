@@ -1,5 +1,9 @@
 package cn.nlifew.clipmgr.ui.main.record;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +23,8 @@ import java.util.Locale;
 
 import cn.nlifew.clipmgr.R;
 import cn.nlifew.clipmgr.bean.ActionRecord;
+import cn.nlifew.clipmgr.util.ClipUtils;
+import cn.nlifew.clipmgr.util.ToastUtils;
 
 class RecyclerAdapterImpl extends RecyclerView.Adapter {
     private static final String TAG = "RecyclerAdapterImpl";
@@ -56,17 +62,7 @@ class RecyclerAdapterImpl extends RecyclerView.Adapter {
 
         holder.labelView.setText(record.rawRecord.getAppName());
         holder.iconView.setImageDrawable(record.icon);
-
-        switch (record.rawRecord.getAction()) {
-            case ActionRecord.ACTION_GRANT:
-                holder.actionView.setText("已允许");
-                break;
-            case ActionRecord.ACTION_DENY:
-                holder.actionView.setText("已拒绝");
-                break;
-            default:
-                holder.actionView.setText("");
-        }
+        holder.actionView.setText(action2str(record.rawRecord.getAction()));
 
         mDate.setTime(record.rawRecord.getTime());
         holder.timeView.setText(mDateFormat.format(mDate));
@@ -76,7 +72,7 @@ class RecyclerAdapterImpl extends RecyclerView.Adapter {
 
     private final Date mDate = new Date();
     private final SimpleDateFormat mDateFormat = new SimpleDateFormat(
-            "yy-MM-dd HH:mm:ss", Locale.CHINA);
+            "MM-dd HH:mm:ss", Locale.getDefault());
 
     private final class Holder extends RecyclerView.ViewHolder implements View.OnClickListener{
         Holder(@NonNull View itemView) {
@@ -98,9 +94,31 @@ class RecyclerAdapterImpl extends RecyclerView.Adapter {
         public void onClick(View v) {
             RecordWrapper record = (RecordWrapper) itemView.getTag();
 
+            DialogInterface.OnClickListener cli = (dialog, which) -> {
+                ClipData clipData = ClipData.newPlainText(
+                        record.rawRecord.getAppName(),
+                        record.rawRecord.getText());
+                Context context = mFragment.getContext();
+                ClipUtils.setPrimaryClip(context, clipData);
+                ToastUtils.getInstance(context).show("已复制到剪贴板");
+            };
+
             new AlertDialog.Builder(mFragment.getActivity())
+                    .setTitle("访问记录")
+                    .setPositiveButton("复制", cli)
+                    .setNeutralButton(action2str(record.rawRecord.getAction()), null)
                     .setMessage(record.rawRecord.getText())
                     .show();
         }
+    }
+
+    private static String action2str(int action) {
+        switch (action) {
+            case ActionRecord.ACTION_GRANT:
+                return ("已允许");
+            case ActionRecord.ACTION_DENY:
+                return ("已拒绝");
+        }
+        return ("未知操作");
     }
 }

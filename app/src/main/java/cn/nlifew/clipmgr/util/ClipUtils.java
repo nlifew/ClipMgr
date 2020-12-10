@@ -73,31 +73,6 @@ public class ClipUtils {
 //        if (! Objects.equals(d1.getDescription(), d2.getDescription())) {
 //            return false;
 //        }
-
-        int n1 = d1.getItemCount(), n2 = d2.getItemCount();
-        if (n1 != n2) {
-            return false;
-        }
-        for (int i = 0; i < n1; i++) {
-            ClipData.Item it1 = d1.getItemAt(i);
-            ClipData.Item it2 = d2.getItemAt(i);
-            if (! equals(it1, it2)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static boolean equals(ClipData.Item it1, ClipData.Item it2) {
-        if (it1 == it2) {
-            return true;
-        }
-        if (it1 == null || it2 == null) {
-            return false;
-        }
-        return Objects.equals(it1.getText(), it2.getText())
-                && Objects.equals(it1.getHtmlText(), it2.getHtmlText())
-                && Objects.equals(it1.getIntent(), it2.getIntent())
-                && Objects.equals(it1.getUri(), it2.getUri());
+        return Objects.equals(d1.toString(), d2.toString());
     }
 }

@@ -107,7 +107,7 @@ public class ExportedProvider extends ContentProvider {
         switch (values.getAsInteger(ActionRecord.Column.ACTION)) {
             case ActionRecord.ACTION_DENY: sb.append("已拒绝"); break;
             case ActionRecord.ACTION_GRANT: sb.append("已允许"); break;
-            default: return;
+            default: sb.append("未知操作"); break;
         }
         sb.append(values.getAsString(ActionRecord.Column.APP_NAME))
                 .append("修改剪贴板为：");

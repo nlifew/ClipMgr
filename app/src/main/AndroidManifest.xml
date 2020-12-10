@@ -16,7 +16,7 @@
             android:name=".provider.ExportedProvider"
             android:authorities="cn.nlifew.clipmgr.provider"
             android:exported="true"
-            />
+            android:multiprocess="false" />
 
         <activity
             android:name=".ui.main.MainActivity"
