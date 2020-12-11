@@ -137,14 +137,14 @@ final class XSetPrimaryClip {
                 " is " + rule);
 
         switch (rule) {
-            case PackageRule.RULE_DENY:         // 授权访问剪贴板
+            case PackageRule.RULE_DENY:         // 禁止访问剪贴板
                 XSetPrimaryClip.saveActionRecord(mContext, mPackageName,
                         clipData, ActionRecord.ACTION_DENY);
-                wrapper.invoke();
                 break;
-            case PackageRule.RULE_GRANT:        // 拒绝访问剪贴板
+            case PackageRule.RULE_GRANT:        // 允许访问剪贴板
                 XSetPrimaryClip.saveActionRecord(mContext, mPackageName,
                         clipData, ActionRecord.ACTION_GRANT);
+                wrapper.invoke();
                 break;
             case PackageRule.RULE_REQUEST:      // 请求用户授权
                 Activity activity = DirtyUtils.getTopActivity();
