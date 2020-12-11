@@ -37,13 +37,6 @@
         <meta-data
             android:name="xposedminversion"
             android:value="54" />
-
-        <activity android:name=".ui.EmptyActivity"></activity>
-        <activity
-            android:name=".ui.request.RequestActivity"
-            android:excludeFromRecents="true"
-            android:exported="true"
-            android:theme="@style/Transparent" />
     </application>
 
 </manifest>

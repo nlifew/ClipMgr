@@ -13,21 +13,18 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.RemoteException;
 
 
 import androidx.annotation.Nullable;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.Objects;
 
 import cn.nlifew.clipmgr.bean.ActionRecord;
 import cn.nlifew.clipmgr.bean.PackageRule;
 import cn.nlifew.clipmgr.provider.ExportedProvider;
-import cn.nlifew.clipmgr.ui.request.OnRequestFinishListener;
-import cn.nlifew.clipmgr.ui.request.RequestActivity;
+import cn.nlifew.clipmgr.ui.request.RequestDialog;
 import cn.nlifew.clipmgr.util.ClipUtils;
 import cn.nlifew.clipmgr.util.DirtyUtils;
 import de.robv.android.xposed.XposedBridge;
@@ -81,10 +78,10 @@ final class XSetPrimaryClip {
         }
     }
 
-    private final class RequestFinishCallback extends OnRequestFinishListener {
+    private final class RequestFinishCallback implements RequestDialog.OnRequestFinishListener {
 
         @Override
-        public void onRequestFinish(int result) throws RemoteException {
+        public void onRequestFinish(int result) {
             XposedBridge.log("onRequestFinish: result = " + result);
             mRequestDialog = null; // 立即置空防止 setPrimaryClip 拦截
 
@@ -94,7 +91,6 @@ final class XSetPrimaryClip {
             if ((result & RESULT_NEGATIVE) != 0) {      // 禁止访问剪贴板
                 packageRule = PackageRule.RULE_DENY;
                 saveActionRecord(mContext, mPackageName, clipData, ActionRecord.ACTION_DENY);
-                mWaitingInvoke = null;
             }
             else if ((result & RESULT_POSITIVE) != 0) { // 允许访问剪贴板
                 packageRule = PackageRule.RULE_GRANT;
@@ -106,6 +102,7 @@ final class XSetPrimaryClip {
                 savePackageRule(mContext, mContext.getPackageName(), packageRule);
             }
 
+            mWaitingInvoke = null;
             XposedBridge.log("onRequestFinish: end");
         }
     }
@@ -116,13 +113,25 @@ final class XSetPrimaryClip {
     }
 
     private AlertDialog mRequestDialog;
-    private final Application mContext;
-    private final String mPackageName;
+    private Application mContext;
+    private String mPackageName;
     private InvokeWrapper mWaitingInvoke;
 
     void setPrimaryClip(IClipboard obj, Method method, Object[] args) {
+        // 每次调用都要刷新参数，防止因为进程池的原因获取到脏数据
+        mContext = ActivityThread.currentApplication();
+        mPackageName = mContext.getPackageName();
+
         final InvokeWrapper wrapper = new InvokeWrapper(obj, method, args);
         final ClipData clipData = wrapper.getClipData();
+
+
+        // 防止因为进程池的原因 hook 到自己
+        if (Objects.equals(MY_PACKAGE_NAME, mPackageName)) {
+            XposedBridge.log(TAG + ": setPrimaryClip: am I hooking myself ?");
+            wrapper.invoke();
+            return;
+        }
 
         // 如果正在展示对话框，更新对话框信息
         if (mRequestDialog != null) {
@@ -173,25 +182,21 @@ final class XSetPrimaryClip {
 
     private void showRequestDialog(Activity activity, ClipData clipData) {
         ApplicationInfo info = mContext.getApplicationInfo();
-        mRequestDialog = new RequestActivity.Builder()
-                .setPackageName(mPackageName)
+
+        mRequestDialog = new RequestDialog.Builder()
+                .setTitle(info.labelRes)
+                .setIcon(info.icon)
+                .setMessage(clip2SimpleText(clipData))
                 .setCancelable(false)
                 .setPositive("允许")
                 .setNegative("拒绝")
                 .setRemember("记住我的选择")
-                .setMessage(clip2SimpleText(clipData))
                 .setCallback(new RequestFinishCallback())
                 .buildDialog(activity)
-                .setIcon(info.icon)
-                .setTitle(info.labelRes)
                 .show();
     }
 
     private static int getPackageRule(Context context, String packageName) {
-        if (Objects.equals(MY_PACKAGE_NAME, packageName)) {
-            return PackageRule.RULE_GRANT;
-        }
-
         Cursor cursor = null;
         try {
             Uri uri = Uri.parse("content://" + ExportedProvider.AUTHORITY

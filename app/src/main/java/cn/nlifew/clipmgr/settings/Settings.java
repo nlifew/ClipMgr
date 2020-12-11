@@ -38,7 +38,7 @@ public final class Settings {
     public static final String KEY_VERSION_CODE     =   "version_code";
 
     public boolean isShowSystemApp() {
-        return mPref.getBoolean(KEY_SHOW_SYSTEM_APP, true);
+        return mPref.getBoolean(KEY_SHOW_SYSTEM_APP, false);
     }
 
     public void setShowSystemApp(boolean show) {
