@@ -21,6 +21,10 @@
         <activity
             android:name=".ui.main.MainActivity"
             android:theme="@style/AppTheme.NoActionBar">
+
+        </activity>
+
+        <activity android:name=".ui.EmptyActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

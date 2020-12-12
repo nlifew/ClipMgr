@@ -35,6 +35,12 @@ public class ClipHook implements IXposedHookLoadPackage {
 
         if (MY_PACKAGE_NAME.equals(param.packageName)) {
             // 我 信 我自己
+
+            if (BuildConfig.DEBUG) {
+                XposedBridge.log("ClipMgr: [" + BuildConfig.VERSION_NAME + "]" +
+                        " <-> [" + BuildConfig.VERSION_CODE + "]");
+            }
+
             return;
         }
         tryHookSystemService(param.classLoader);

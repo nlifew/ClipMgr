@@ -31,6 +31,6 @@ ext {
     buildToolsVersion = "29.0.3"
     minSdkVersion = 23
     targetSdkVersion = 29 // Android 10.0
-    versionCode = 10
-    versionName = "1.6"
+    versionCode = 11
+    versionName = "1.6.1"
 }

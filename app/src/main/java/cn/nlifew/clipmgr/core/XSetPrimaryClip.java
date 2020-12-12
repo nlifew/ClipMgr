@@ -107,12 +107,8 @@ final class XSetPrimaryClip {
         }
     }
 
-    XSetPrimaryClip() {
-        mContext = ActivityThread.currentApplication();
-        mPackageName = mContext.getPackageName();
-    }
 
-    private AlertDialog mRequestDialog;
+    private RequestDialog mRequestDialog;
     private Application mContext;
     private String mPackageName;
     private InvokeWrapper mWaitingInvoke;
@@ -183,7 +179,7 @@ final class XSetPrimaryClip {
     private void showRequestDialog(Activity activity, ClipData clipData) {
         ApplicationInfo info = mContext.getApplicationInfo();
 
-        mRequestDialog = new RequestDialog.Builder()
+        mRequestDialog = new RequestDialog.Builder(activity)
                 .setTitle(info.labelRes)
                 .setIcon(info.icon)
                 .setMessage(clip2SimpleText(clipData))
@@ -192,8 +188,8 @@ final class XSetPrimaryClip {
                 .setNegative("拒绝")
                 .setRemember("记住我的选择")
                 .setCallback(new RequestFinishCallback())
-                .buildDialog(activity)
-                .show();
+                .create();
+        mRequestDialog.show();
     }
 
     private static int getPackageRule(Context context, String packageName) {

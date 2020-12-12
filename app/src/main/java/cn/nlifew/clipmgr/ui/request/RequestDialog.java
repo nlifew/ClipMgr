@@ -2,10 +2,18 @@ package cn.nlifew.clipmgr.ui.request;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
+import android.graphics.Typeface;
+import android.os.Build;
+import android.text.style.AbsoluteSizeSpan;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
@@ -13,6 +21,8 @@ import android.widget.TextView;
 
 import androidx.annotation.DrawableRes;
 import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.annotation.StyleRes;
 
@@ -21,7 +31,7 @@ import java.lang.annotation.RetentionPolicy;
 
 import cn.nlifew.clipmgr.util.DisplayUtils;
 
-public class RequestDialog {
+public class RequestDialog extends Dialog {
 
     public interface OnRequestFinishListener {
         int RESULT_UNKNOWN  =   0;
@@ -41,36 +51,45 @@ public class RequestDialog {
 
     public static class Builder {
 
-        private CharSequence mMessage;
-        private CharSequence mPositive, mNegative;
-        private CharSequence mRemember;
-        private boolean mCancelable;
-        private @StringRes int mTitle;
-        private @DrawableRes int mIcon;
+        public Builder(Activity activity) {
+            mActivity = activity;
+            mDialogView = new AlertDialogLayout(activity);
+        }
+
+        private final Activity mActivity;
+        private final AlertDialogLayout mDialogView;
+
         private OnRequestFinishListener mCallback;
+        private boolean mCancelable = true;
+
 
         public Builder setTitle(@StringRes int title) {
-            mTitle = title;
+            mDialogView.setTitle(title);
+            return this;
+        }
+
+        public Builder setIcon(@DrawableRes int icon) {
+            mDialogView.setIcon(icon);
             return this;
         }
 
         public Builder setMessage(CharSequence msg) {
-            mMessage = msg;
+            mDialogView.setMessage(msg);
             return this;
         }
 
         public Builder setPositive(CharSequence text) {
-            mPositive = text;
+            mDialogView.setPositive(text);
             return this;
         }
 
         public Builder setNegative(CharSequence text) {
-            mNegative = text;
+            mDialogView.setNegative(text);
             return this;
         }
 
         public Builder setRemember(CharSequence text) {
-            mRemember = text;
+            mDialogView.setRemember(text);
             return this;
         }
 
@@ -79,95 +98,52 @@ public class RequestDialog {
             return this;
         }
 
-        public Builder setIcon(@DrawableRes int icon) {
-            mIcon = icon;
-            return this;
-        }
-
         public Builder setCallback(OnRequestFinishListener callback) {
             mCallback = callback;
             return this;
         }
 
-        public AlertDialog.Builder buildDialog(Activity activity) {
-            return new DialogHelper(activity, this)
-                    .buildAlertDialog();
+        public RequestDialog create() {
+            return new RequestDialog(this);
+        }
+
+        public RequestDialog show() {
+            RequestDialog dialog = new RequestDialog(this);
+            dialog.show();
+            return dialog;
         }
     }
 
-    private static final class DialogHelper implements DialogInterface.OnClickListener,
-            DialogInterface.OnCancelListener {
 
-        DialogHelper(Activity activity, Builder builder) {
-            mActivity = activity;
-            mBuilder = builder;
-        }
+    protected RequestDialog(Builder builder) {
+        super(builder.mActivity, android.R.style
+                .Theme_Material_Light_Dialog_NoActionBar_MinWidth);
 
-        private final Activity mActivity;
-        private final Builder mBuilder;
-        private CheckBox mCheckBox;
+        setCancelable(builder.mCancelable);
+        setContentView(builder.mDialogView, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        ClickWrapper click = new ClickWrapper();
+        setOnCancelListener(click);
+        builder.mDialogView.mNegativeView.setOnClickListener(click);
+        builder.mDialogView.mPositiveView.setOnClickListener(click);
+
+
+        mDialogView = builder.mDialogView;
+        mCallback = builder.mCallback;
+    }
+
+    private final OnRequestFinishListener mCallback;
+    private final AlertDialogLayout mDialogView;
+
+
+    private final class ClickWrapper implements
+            DialogInterface.OnCancelListener,
+            View.OnClickListener {
+
         private boolean mShouldCallback = true;
-
-
-        AlertDialog.Builder buildAlertDialog() {
-            final @StyleRes int theme = android.R.style.Theme_Material_Light_Dialog_NoActionBar_MinWidth;
-
-            AlertDialog.Builder builder = new AlertDialog.Builder(mActivity, theme);
-
-            builder.setTitle(mBuilder.mTitle)
-                    .setMessage(mBuilder.mMessage)
-                    .setIcon(mBuilder.mIcon)
-                    .setPositiveButton(mBuilder.mPositive, this)
-                    .setNegativeButton(mBuilder.mNegative, this)
-                    .setCancelable(mBuilder.mCancelable)
-                    .setOnCancelListener(this);
-
-            if (mBuilder.mRemember != null) {
-                ContextThemeWrapper context = new ContextThemeWrapper(mActivity, theme);
-
-                LinearLayout layout = new LinearLayout(context);
-                layout.setLayoutParams(new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT
-                ));
-                int dp20 = DisplayUtils.dp2px(mActivity, 20);
-                layout.setPadding(dp20, dp20 / 2, dp20, dp20 / 2);
-
-                mCheckBox = new CheckBox(context);
-                ViewGroup.MarginLayoutParams lp = new ViewGroup.MarginLayoutParams(
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                );
-                lp.rightMargin = dp20 / 2;
-                layout.addView(mCheckBox, lp);
-
-                TextView tv = new TextView(context);
-                tv.setText(mBuilder.mRemember);
-                tv.setGravity(Gravity.CENTER_VERTICAL);
-                tv.setTextColor(0xFF737373);
-                tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-                tv.setOnClickListener(v -> mCheckBox.setChecked(! mCheckBox.isChecked()));
-
-                layout.addView(tv,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.MATCH_PARENT);
-                builder.setView(layout);
-            }
-            return builder;
-        }
-
-        @Override
-        public void onClick(DialogInterface dialog, int which) {
-            dialog.dismiss();
-            switch (which) {
-                case DialogInterface.BUTTON_POSITIVE:
-                    onRequestFinish(OnRequestFinishListener.RESULT_POSITIVE);
-                    break;
-                case DialogInterface.BUTTON_NEGATIVE:
-                    onRequestFinish(OnRequestFinishListener.RESULT_NEGATIVE);
-                    break;
-            }
-        }
 
         @Override
         public void onCancel(DialogInterface dialog) {
@@ -175,19 +151,38 @@ public class RequestDialog {
             onRequestFinish(OnRequestFinishListener.RESULT_CANCEL);
         }
 
+        @Override
+        public void onClick(View v) {
+            dismiss();
+
+            if (v == mDialogView.mPositiveView) {
+                onRequestFinish(OnRequestFinishListener.RESULT_POSITIVE);
+            }
+            else if (v == mDialogView.mNegativeView) {
+                onRequestFinish(OnRequestFinishListener.RESULT_NEGATIVE);
+            }
+        }
+
+
         private void onRequestFinish(int result) {
             if (! mShouldCallback) {
                 return;
             }
             mShouldCallback = false;
 
-            if (mCheckBox != null && mCheckBox.isChecked()) {
+            if (mDialogView.mRememberLayout.getVisibility() == View.VISIBLE
+                && mDialogView.mCheckBox.isChecked()) {
                 result |= OnRequestFinishListener.RESULT_REMEMBER;
             }
 
-            if (mBuilder.mCallback != null) {
-                mBuilder.mCallback.onRequestFinish(result);
+            if (mCallback != null) {
+                mCallback.onRequestFinish(result);
             }
         }
+    }
+
+
+    public void setMessage(CharSequence text) {
+        mDialogView.setMessage(text);
     }
 }
