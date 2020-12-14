@@ -9,8 +9,6 @@ import android.view.ViewGroup;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.StringRes;
 
-import cn.nlifew.clipmgr.request.OnRequestFinishListener;
-
 @Deprecated
 public class RequestDialog extends Dialog {
     public static class Builder {

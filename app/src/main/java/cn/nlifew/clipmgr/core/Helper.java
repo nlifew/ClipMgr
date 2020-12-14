@@ -8,6 +8,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Binder;
 import android.os.IBinder;
 import android.os.Parcel;
 
@@ -98,5 +99,15 @@ final class Helper {
                 .append("尝试修改剪贴板为：");
         ClipUtils.clip2SimpleString(clipData, sb);
         return sb.toString();
+    }
+
+
+    static String getCallingPackage(Context context) {
+        int uid = Binder.getCallingUid();
+        PackageManager pm = context.getPackageManager();
+        String packageName = pm.getNameForUid(uid);
+
+        int idx = packageName.indexOf(':');
+        return idx == -1 ? packageName : packageName.substring(0, idx);
     }
 }

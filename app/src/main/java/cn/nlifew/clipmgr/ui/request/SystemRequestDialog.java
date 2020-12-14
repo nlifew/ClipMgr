@@ -2,6 +2,7 @@ package cn.nlifew.clipmgr.ui.request;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.telecom.Call;
@@ -111,5 +112,63 @@ public class SystemRequestDialog extends AlertDialog {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.MATCH_PARENT);
         mRememberLayout.addView(mRememberView, lp);
+    }
+
+
+    public static class Callback implements OnRequestFinishListener,
+            DialogInterface.OnClickListener,
+            DialogInterface.OnCancelListener,
+            DialogInterface.OnDismissListener {
+
+        public Callback() {
+            mCallback = this;
+        }
+
+        public Callback(OnRequestFinishListener callback) {
+            mCallback = callback;
+        }
+
+        private final OnRequestFinishListener mCallback;
+
+        @Override
+        public void onCancel(DialogInterface dialog) {
+            dialog.dismiss();
+            performCallback(dialog, OnRequestFinishListener.RESULT_CANCEL);
+        }
+
+        @Override
+        public void onClick(DialogInterface dialog, int which) {
+            dialog.dismiss();
+            switch (which) {
+                case DialogInterface.BUTTON_POSITIVE:
+                    performCallback(dialog, RESULT_POSITIVE);
+                    break;
+                case DialogInterface.BUTTON_NEGATIVE:
+                    performCallback(dialog, OnRequestFinishListener.RESULT_NEGATIVE);
+                    break;
+            }
+        }
+
+        @Override
+        public void onDismiss(DialogInterface dialog) {
+
+        }
+
+        private void performCallback(DialogInterface d, @flag int result) {
+            SystemRequestDialog dialog = (SystemRequestDialog) d;
+            if (dialog.isRememberChecked()) {
+                result |= RESULT_REMEMBER;
+            }
+
+            if (mCallback != null) {
+                onRequestFinish(result);
+            }
+        }
+
+
+        @Override
+        public void onRequestFinish(int result) {
+
+        }
     }
 }
