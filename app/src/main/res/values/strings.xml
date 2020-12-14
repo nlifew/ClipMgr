@@ -14,4 +14,15 @@
 
     <string name="title_app">应用程序</string>
     <string name="title_history">使用记录</string>
+
+    <string name="alive_channel_name">后台存活服务</string>
+    <string name="alive_channel_description">
+        这个通知用来保证 app 的后台存活。如果被系统杀死，目标应用可能无法链接到此 app，这会导致"历史记录"和"记住选择"失效。
+    </string>
+
+    <string name="alive_notification_title">@string/alive_channel_name</string>
+    <string name="alive_notification_content">正在监听剪贴板，您可以侧滑关闭此通知。</string>
+
+    <string name="about_title">常见问题</string>
+
 </resources>

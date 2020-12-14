@@ -3,7 +3,6 @@ package cn.nlifew.clipmgr.util;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.Intent;
 import android.util.Log;
 
 import java.util.Objects;

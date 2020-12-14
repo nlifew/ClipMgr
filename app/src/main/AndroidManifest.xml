@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="cn.nlifew.clipmgr">
 
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
     <application
         android:name=".app.ThisApp"
         android:allowBackup="true"
@@ -10,8 +13,29 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme"
+        android:theme="@style/AppTheme.NoActionBar"
+        android:fullBackupContent="true"
         tools:ignore="GoogleAppIndexingWarning">
+        <service
+            android:name=".service.AliveService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <category android:name="android.intent.category.DEFAULT" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+            <intent-filter>
+                <category android:name="android.intent.category.DEFAULT" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name=".provider.ExportedProvider"
             android:authorities="cn.nlifew.clipmgr.provider"
@@ -20,9 +44,13 @@
 
         <activity
             android:name=".ui.main.MainActivity"
-            android:theme="@style/AppTheme.NoActionBar">
+            android:launchMode="singleTask">
 
         </activity>
+
+        <activity android:name=".ui.about.AboutActivity"
+            android:launchMode="singleTop" />
+
 
         <activity android:name=".ui.EmptyActivity">
             <intent-filter>

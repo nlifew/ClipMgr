@@ -2,12 +2,8 @@ package cn.nlifew.clipmgr.settings;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
 
 import java.util.Map;
-
-import cn.nlifew.clipmgr.BuildConfig;
 
 public final class Settings {
 

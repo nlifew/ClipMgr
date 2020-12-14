@@ -27,13 +27,11 @@ public class ExportedProvider extends ContentProvider {
 
     public static final String PATH_PACKAGE_RULE = "rule";
     public static final String PATH_ACTION_RECORD = "record";
-    public static final String PATH_SETTINGS = "settings";
 
     private static final int TABLE_PACKAGE_RULE_DIR = 1;
     private static final int TABLE_PACKAGE_RULE_ITEM = 2;
     private static final int TABLE_ACTION_RECORD_DIR = 3;
     private static final int TABLE_ACTION_RECORD_ITEM = 4;
-    private static final int TABLE_SETTINGS_DIR = 5;
 
     private static final UriMatcher sUriMatcher;
     static {
@@ -42,7 +40,6 @@ public class ExportedProvider extends ContentProvider {
         sUriMatcher.addURI(AUTHORITY, PATH_PACKAGE_RULE + "/*", TABLE_PACKAGE_RULE_ITEM);
         sUriMatcher.addURI(AUTHORITY, PATH_ACTION_RECORD, TABLE_ACTION_RECORD_DIR);
         sUriMatcher.addURI(AUTHORITY, PATH_ACTION_RECORD + "/*", TABLE_ACTION_RECORD_ITEM);
-        sUriMatcher.addURI(AUTHORITY, PATH_SETTINGS, TABLE_SETTINGS_DIR);
     }
 
     @Override
@@ -76,8 +73,6 @@ public class ExportedProvider extends ContentProvider {
                 return "vnd.android.cursor.dir/vnd." + AUTHORITY + "." + PATH_ACTION_RECORD;
             case TABLE_ACTION_RECORD_ITEM:
                 return "vnd.android.cursor.item/vnd." + AUTHORITY + "." + PATH_ACTION_RECORD;
-            case TABLE_SETTINGS_DIR:
-                return "vnd.android.cursor.dir/vnd." + AUTHORITY + "." + PATH_SETTINGS;
         }
         return null;
     }
@@ -143,9 +138,6 @@ public class ExportedProvider extends ContentProvider {
                         ActionRecord.Column.PACKAGE + "= ?",
                         new String[]{uri.getLastPathSegment()},
                         null, null, sortOrder);
-            case TABLE_SETTINGS_DIR:
-                Map<String, ?> map = Settings.getInstance(getContext()).getAll();
-                return BundleCursor.makeCursor(map);
         }
         return null;
     }

@@ -1,6 +1,5 @@
 package cn.nlifew.clipmgr.bean;
 
-import android.content.Context;
 import android.os.Parcel;
 import android.os.Parcelable;
 

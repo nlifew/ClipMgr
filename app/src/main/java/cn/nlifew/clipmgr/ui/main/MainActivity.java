@@ -3,6 +3,7 @@ package cn.nlifew.clipmgr.ui.main;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
@@ -22,8 +23,11 @@ import com.google.android.material.tabs.TabLayout;
 
 import cn.nlifew.clipmgr.R;
 import cn.nlifew.clipmgr.provider.ExportedProvider;
+import cn.nlifew.clipmgr.request.RequestDialogManager;
+import cn.nlifew.clipmgr.service.AliveService;
 import cn.nlifew.clipmgr.settings.Settings;
 import cn.nlifew.clipmgr.ui.BaseActivity;
+import cn.nlifew.clipmgr.ui.about.AboutActivity;
 import cn.nlifew.clipmgr.util.DirtyUtils;
 import cn.nlifew.clipmgr.util.PackageUtils;
 
@@ -47,32 +51,45 @@ public class MainActivity extends BaseActivity implements
         tabLayout.setupWithViewPager(pager);
 
         mViewModel = new ViewModelProvider(this).get(MainViewModel.class);
+
+        Intent intent = new Intent(this, AliveService.class);
+        startService(intent);
     }
 
     private MainViewModel mViewModel;
 
+
     @Override
     protected void onResume() {
         super.onResume();
+        checkRemoteService();
+    }
 
-        Activity activity = DirtyUtils.getTopActivity();
-        if (activity == null) {
-            String msg = "我无法在你的设备上无法获取活动的 Activity，" +
-                    "可能是您的厂商更改了相关接口\n\n" +
-                    "您不应该继续使用该 app，并立即卸载之";
-
-            DialogInterface.OnClickListener cli = (dialog, which) -> {
-                dialog.dismiss();
-                finish();
-            };
-
-            new AlertDialog.Builder(this)
-                    .setCancelable(false)
-                    .setTitle("失败")
-                    .setMessage(msg)
-                    .setPositiveButton("退出", cli)
-                    .show();
+    private void checkRemoteService() {
+        RequestDialogManager dm = RequestDialogManager.getInstance(this);
+        if (dm.available()) {
+            return;
         }
+
+        DialogInterface.OnClickListener cli = (dialog, which) -> {
+            dialog.dismiss();
+            if (which != DialogInterface.BUTTON_POSITIVE) {
+                return;
+            }
+            Intent intent = new Intent(this, AboutActivity.class);
+            startActivity(intent);
+        };
+
+        String msg = "无法获取到远程服务。可能是 xposed 未激活，或者是服务注册异常。" +
+                "您可以在 xposed manager 的 \"日志\" 里获取必要的信息，并反馈给开发者。\n\n" +
+                "点击下面的 \"确定\" 按钮，获取更多信息。";
+
+        new AlertDialog.Builder(this)
+                .setTitle("未能获取弹窗服务")
+                .setMessage(msg)
+                .setPositiveButton("确定", cli)
+                .setNegativeButton("忽略", cli)
+                .show();
     }
 
     @Override

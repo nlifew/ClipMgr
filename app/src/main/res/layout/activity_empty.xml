@@ -14,13 +14,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:text="点击开启服务" />
+        android:text="点击发送 Parcel" />
 
     <Button
         android:id="@+id/activity_main_btn2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:text="点击发送广播"/>
+        android:text="点击接收 Parcel"/>
 
 </LinearLayout>

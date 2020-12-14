@@ -1,7 +1,6 @@
 package cn.nlifew.clipmgr.ui.main.record;
 
 import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.view.LayoutInflater;

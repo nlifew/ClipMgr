@@ -1,54 +1,18 @@
 package cn.nlifew.clipmgr.ui.request;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.Context;
 import android.content.DialogInterface;
-import android.graphics.Typeface;
-import android.os.Build;
-import android.text.style.AbsoluteSizeSpan;
-import android.text.style.ForegroundColorSpan;
-import android.text.style.StyleSpan;
-import android.util.TypedValue;
-import android.view.ContextThemeWrapper;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CheckBox;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import androidx.annotation.DrawableRes;
-import androidx.annotation.IntDef;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
-import androidx.annotation.StyleRes;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
+import cn.nlifew.clipmgr.request.OnRequestFinishListener;
 
-import cn.nlifew.clipmgr.util.DisplayUtils;
-
+@Deprecated
 public class RequestDialog extends Dialog {
-
-    public interface OnRequestFinishListener {
-        int RESULT_UNKNOWN  =   0;
-        int RESULT_CANCEL   =   1;
-        int RESULT_POSITIVE =   1 << 1;
-        int RESULT_NEGATIVE =   1 << 2;
-        int RESULT_REMEMBER =   1 << 3;
-
-
-        @Retention(RetentionPolicy.SOURCE)
-        @IntDef({RESULT_UNKNOWN, RESULT_CANCEL, RESULT_POSITIVE,
-                RESULT_NEGATIVE, RESULT_REMEMBER})
-        @interface flag {  }
-
-        void onRequestFinish(@flag int result);
-    }
-
     public static class Builder {
 
         public Builder(Activity activity) {
@@ -176,7 +140,7 @@ public class RequestDialog extends Dialog {
             }
 
             if (mCallback != null) {
-                mCallback.onRequestFinish(result);
+//                mCallback.onRequestFinish(result);
             }
         }
     }

@@ -2,13 +2,10 @@ package cn.nlifew.clipmgr.ui.request;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.Dialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -36,6 +33,7 @@ import cn.nlifew.clipmgr.util.DisplayUtils;
  * 就有可能崩溃。因此这个 View 也必须遵循同样的原则，所有资源都要通过 java 代码管理
  */
 @SuppressLint("ViewConstructor")
+@Deprecated
 public class AlertDialogLayout extends LinearLayout {
     private static final String TAG = "AlertDialogLayout";
 
