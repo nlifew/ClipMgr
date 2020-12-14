@@ -11,6 +11,7 @@
     <string name="options_clear_history">清除历史记录</string>
     <string name="options_radical_mode">激进模式</string>
     <string name="options_about">关于</string>
+    <string name="options_qas">常见问题</string>
 
     <string name="title_app">应用程序</string>
     <string name="title_history">使用记录</string>

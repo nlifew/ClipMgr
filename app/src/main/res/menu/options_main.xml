@@ -19,6 +19,10 @@
         android:title="@string/options_clear_history" />
 
     <item
+        android:id="@+id/options_qas"
+        android:title="@string/options_qas" />
+
+    <item
         android:id="@+id/options_about"
         android:title="@string/options_about" />
 </menu>

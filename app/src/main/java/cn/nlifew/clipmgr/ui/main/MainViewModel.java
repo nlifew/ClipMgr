@@ -15,6 +15,7 @@ import org.litepal.LitePal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import cn.nlifew.clipmgr.BuildConfig;
@@ -39,7 +40,11 @@ public class MainViewModel extends ViewModel {
     private String mFilterName;
 
     void setFilterName(String appName) {
-        mFilterName = appName;
+        if (appName == null) {
+            mFilterName = null;
+        } else {
+            mFilterName = appName.toLowerCase(Locale.getDefault());
+        }
     }
 
     void clearAll() {
@@ -171,7 +176,9 @@ public class MainViewModel extends ViewModel {
                     }
                     // 过滤掉不含关键词的
                     String appName = info.loadLabel(pm).toString();
-                    if (filterName != null && ! appName.contains(filterName)) {
+                    if (filterName != null && ! appName
+                            .toLowerCase(Locale.getDefault())
+                            .contains(filterName)) {
                         continue;
                     }
 

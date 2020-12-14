@@ -79,8 +79,8 @@ public class MainActivity extends BaseActivity implements
         return true;
     }
 
-    @SuppressLint("NonConstantResourceId")
     @Override
+    @SuppressLint("NonConstantResourceId")
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.options_clear_history:
@@ -93,6 +93,9 @@ public class MainActivity extends BaseActivity implements
                 return true;
             case R.id.options_about:
                 showAboutDialog();
+                return true;
+            case R.id.options_qas:
+                startActivity(new Intent(this, AboutActivity.class));
                 return true;
         }
         return super.onOptionsItemSelected(item);
