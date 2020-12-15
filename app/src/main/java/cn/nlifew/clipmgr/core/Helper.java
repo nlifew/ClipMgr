@@ -90,8 +90,6 @@ final class Helper {
                             rule + "] of package: [" + packageName + "]");
             XposedBridge.log(e);
         }
-
-
     }
 
     static String clip2SimpleText(ClipData clipData) {
@@ -99,15 +97,5 @@ final class Helper {
                 .append("尝试修改剪贴板为：");
         ClipUtils.clip2SimpleString(clipData, sb);
         return sb.toString();
-    }
-
-
-    static String getCallingPackage(Context context) {
-        int uid = Binder.getCallingUid();
-        PackageManager pm = context.getPackageManager();
-        String packageName = pm.getNameForUid(uid);
-
-        int idx = packageName.indexOf(':');
-        return idx == -1 ? packageName : packageName.substring(0, idx);
     }
 }

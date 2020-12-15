@@ -7,9 +7,11 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 
+import androidx.annotation.Keep;
+
 import org.litepal.LitePalApplication;
 
-
+@Keep
 public class ThisApp extends LitePalApplication {
     private static final String TAG = "ThisApp";
 

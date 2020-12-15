@@ -115,6 +115,8 @@ public class SystemRequestDialog extends AlertDialog {
     }
 
 
+
+
     public static class Callback implements OnRequestFinishListener,
             DialogInterface.OnClickListener,
             DialogInterface.OnCancelListener,
@@ -128,6 +130,7 @@ public class SystemRequestDialog extends AlertDialog {
             mCallback = callback;
         }
 
+        private boolean mShouldCallback = true;
         private final OnRequestFinishListener mCallback;
 
         @Override
@@ -151,10 +154,15 @@ public class SystemRequestDialog extends AlertDialog {
 
         @Override
         public void onDismiss(DialogInterface dialog) {
-
+            performCallback(dialog, RESULT_CANCEL);
         }
 
         private void performCallback(DialogInterface d, @flag int result) {
+            if (!mShouldCallback) {
+                return;
+            }
+            mShouldCallback = false;
+
             SystemRequestDialog dialog = (SystemRequestDialog) d;
             if (dialog.isRememberChecked()) {
                 result |= RESULT_REMEMBER;

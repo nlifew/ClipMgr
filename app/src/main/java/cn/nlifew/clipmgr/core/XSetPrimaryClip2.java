@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Objects;
 
+import cn.nlifew.clipmgr.BuildConfig;
 import cn.nlifew.clipmgr.bean.ActionRecord;
 import cn.nlifew.clipmgr.bean.PackageRule;
 import cn.nlifew.clipmgr.ui.request.OnRequestFinishListener;
@@ -28,7 +29,6 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 
 import static cn.nlifew.clipmgr.core.Helper.clip2SimpleText;
-import static cn.nlifew.clipmgr.core.Helper.getCallingPackage;
 import static cn.nlifew.clipmgr.core.Helper.savePackageRule;
 import static cn.nlifew.clipmgr.ui.request.OnRequestFinishListener.RESULT_POSITIVE;
 import static cn.nlifew.clipmgr.ui.request.OnRequestFinishListener.RESULT_REMEMBER;
@@ -39,29 +39,9 @@ import static cn.nlifew.clipmgr.core.Helper.saveActionRecord;
 final class XSetPrimaryClip2 extends XC_MethodHook {
     private static final String TAG = "XSetPrimaryClip2";
 
-    private static Method findAndCheckMethod(IBinder service) {
-        for (Method method : service.getClass().getDeclaredMethods()) {
-            if ((method.getModifiers() & Modifier.PUBLIC) == 0) {
-                continue;
-            }
-
-            if (! "setPrimaryClip".equals(method.getName())) {
-                continue;
-            }
-
-            Class<?>[] params = method.getParameterTypes();
-            Class<?> result = method.getReturnType();
-            if (params[0] == ClipData.class && result == void.class) {
-                return method;
-            }
-        }
-        return null;
-    }
-
-
-    XSetPrimaryClip2(IBinder service) {
+    XSetPrimaryClip2(Method method, IBinder service) {
         mThis = service;
-        mSetPrimaryClip = findAndCheckMethod(service);
+        mSetPrimaryClip = method;
     }
 
 
@@ -76,17 +56,13 @@ final class XSetPrimaryClip2 extends XC_MethodHook {
 
 
     private boolean shouldIgnoreThisCall(Object[] args) {
-        if (mSetPrimaryClip == null) {
-            return true;
-        }
-
-        // 保证第一个参数是 ClipData
-        if (! (args[0] instanceof ClipData)) {
-            return true;
-        }
-
         // 保证不会递归拦截
         if (mPendingQueue.size() > 0 && Arrays.equals(mPendingQueue.get(0).args, args)) {
+            return true;
+        }
+
+        // 不能是我们自己
+        if (BuildConfig.APPLICATION_ID.equals(args[1])) {
             return true;
         }
 
@@ -95,36 +71,42 @@ final class XSetPrimaryClip2 extends XC_MethodHook {
 
     @Override
     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-        if (shouldIgnoreThisCall(param.args)) {
-            return;
-        }
+        final long id = Binder.clearCallingIdentity();
 
-        final ClipData clipData = (ClipData) param.args[0];
+        try {
+            if (shouldIgnoreThisCall(param.args)) {
+                return;
+            }
 
+            final ClipData clipData = (ClipData) param.args[0];
+            final String packageName = (String) param.args[1];
 
-        final Context context = ActivityThread.currentApplication();
-        final String packageName = getCallingPackage(context);
-        final int rule = getPackageRule(context, packageName);
+            final Context context = ActivityThread.currentApplication();
+            final int rule = getPackageRule(context, packageName);
 
-        XposedBridge.log(TAG + ": the rule of " + packageName + " is " + rule);
+            XposedBridge.log(TAG + ": the rule of " + packageName + " is " + rule);
 
-        switch (rule) {
-            case PackageRule.RULE_GRANT:    // 授权访问剪贴板
-                saveActionRecord(context, packageName, clipData, ActionRecord.ACTION_GRANT);
-                break;
-            case PackageRule.RULE_DENY:     // 禁止访问剪贴板
-                saveActionRecord(context, packageName, clipData, ActionRecord.ACTION_DENY);
-                param.setResult(null);
-                break;
-            case PackageRule.RULE_REQUEST:  // 弹出授权对话框
-                param.setResult(null);
+            switch (rule) {
+                case PackageRule.RULE_GRANT:    // 授权访问剪贴板
+                    saveActionRecord(context, packageName, clipData, ActionRecord.ACTION_GRANT);
+                    break;
+                case PackageRule.RULE_DENY:     // 禁止访问剪贴板
+                    saveActionRecord(context, packageName, clipData, ActionRecord.ACTION_DENY);
+                    param.setResult(null);
+                    break;
+                case PackageRule.RULE_REQUEST:  // 弹出授权对话框
+                    param.setResult(null);
 
-                PendingTransaction pt = new PendingTransaction(mSetPrimaryClip, mThis, param.args);
-                pt.context = context;
-                pt.packageName = packageName;
-                pt.clipData = clipData;
-                mH.post(() -> showRequestDialog(pt));
-                break;
+                    PendingTransaction pt = new PendingTransaction(mSetPrimaryClip, mThis, param.args);
+                    pt.context = context;
+                    pt.packageName = packageName;
+                    pt.clipData = clipData;
+                    pt.identity = id;
+                    mH.post(() -> showRequestDialog(pt));
+                    break;
+            }
+        } finally {
+            Binder.restoreCallingIdentity(id);
         }
     }
 
@@ -176,6 +158,11 @@ final class XSetPrimaryClip2 extends XC_MethodHook {
         dialog.setMessage(clip2SimpleText(clipData));
         dialog.setButton(DialogInterface.BUTTON_POSITIVE, "允许", callback);
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, "拒绝", callback);
+        dialog.setOnDismissListener(callback); // [1]
+
+        // [1] 看起来很有问题，很多余对不对 ? 为什么明明已经设置了 cancelable = false
+        // 还要多此一举再设置个回调 ? 天真，你是不知道有个模块叫 "对话框取消"，呵呵
+        // 只要一手贱按下返回键，好家伙，以后全不能复制了
     }
 
     private static final class PendingTransaction {
@@ -185,22 +172,19 @@ final class XSetPrimaryClip2 extends XC_MethodHook {
             this.method = method;
             this.object = obj;
             this.args = args;
-
-            this.identity = Binder.clearCallingIdentity();
         }
 
         final Method method;
         final Object object;
         final Object[] args;
-        final long identity;
+
+        long identity;
 
         Context context;
         String packageName;
         ClipData clipData;
 
         void transact() {
-            Binder.restoreCallingIdentity(identity);
-
             try {
                 method.invoke(object, args);
             } catch (Throwable t) {
@@ -210,17 +194,19 @@ final class XSetPrimaryClip2 extends XC_MethodHook {
         }
     }
 
-
     private class CallbackImpl extends SystemRequestDialog.Callback {
         private static final String TAG = "CallbackImpl";
 
         @Override
         public void onRequestFinish(int result) {
+            final long id = Binder.clearCallingIdentity();
             try {
                 handleResult(result);
             } catch (Throwable t) {
                 XposedBridge.log(TAG + ": onRequestFinish: failed");
                 XposedBridge.log(t);
+            } finally {
+                Binder.restoreCallingIdentity(id);
             }
 
             // 从队列中移除
@@ -248,6 +234,7 @@ final class XSetPrimaryClip2 extends XC_MethodHook {
             if ((result & RESULT_POSITIVE) != 0) {      // 允许访问剪贴板
                 packageRule = PackageRule.RULE_GRANT;
                 saveActionRecord(context, packageName, clipData, ActionRecord.ACTION_GRANT);
+                Binder.restoreCallingIdentity(pending.identity);
                 pending.transact();
             }
             else {  // 只要没有明确允许，就是拒绝
